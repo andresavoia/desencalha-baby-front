@@ -1,0 +1,230 @@
+﻿@{
+    Layout = "_LayoutPesquisa";
+}
+
+@section breadCrumb {
+    <div id="breadcrumb">
+        <div class="container">
+            <ul class="breadcrumb">
+                <li><a href="/">Home</a></li>
+                <li><a href="" id="lnkCategoria"></a></li>
+                <li class="active" id="lblProdutoNome"></li>
+            </ul>
+        </div>
+    </div>
+}
+<script>
+
+    $(document).ready(function () {
+
+        var idProduto = Js.Util.QueryString("idProduto");
+        var produto = ObterProdutoServico(idProduto);
+
+        $("#lnkCategoria").html(produto.DescCategoria);
+        $("#lnkCategoria").attr("href", "/produto/pesquisa/?idCategoria=" + produto.IdCategoria);
+        $("#lblProdutoNome").html(produto.Titulo);
+        $("#lblCategoria").html(produto.DescCategoria);
+        $("#lblDescricao").html(produto.Descricao.replace(/\n/g, "<br />"));
+        $("#lblTitulo").html(produto.Titulo);
+
+        ListarProduto("divProdutoPromocao", "promocao");
+        if (produto.ProdutoPromocao) {
+            $("#lblTituloVariavel").html("Promoção");
+            $("#lblTituloVariavel").removeClass("hidden");
+        }
+
+        if (produto.ProdutoLancamento && !produto.ProdutoPromocao) {
+            $("#lblTituloVariavel").html("Lançamento");
+            $("#lblTituloVariavel").removeClass("hidden");
+        }
+
+
+        var valor = (!isNaN(produto.ValorVenda) ? Js.Util.FormatarValorBrasil(produto.ValorVenda, true) : '<a href="/cliente/novo">Cadastre-se</a>');
+
+        $("#lblValor").html(valor);
+
+        $("#divComprar").removeClass('hidden');
+
+
+        $.each(produto.Imagens, function () {
+
+            let imagemPrincipal = URL_SERVICO + "/" + this.Caminho + "/" + this.Nome;
+            let imagemPrincipalThumb = imagemPrincipal.toLowerCase().replace('.jpg', '_M.jpg');
+
+            $("#product-main-view").append(`
+                        <div class="product-view">
+                            <img src="${imagemPrincipal}" alt="">
+                        </div>
+            `);
+
+        });
+
+        if(produto.Estoque<=0){
+            $("#btnIndisponivel").removeClass("hidden");
+            $("#btnAdicionar").addClass("hidden");
+        }
+        else
+            $("#btnAdicionar").removeClass("hidden");
+
+
+        //$("#product-view img").css("height", "100px");
+        
+
+        // PRODUCT DETAILS SLICK
+        $('#product-main-view').slick({
+            dots: true,
+            infinite: true,
+            speed: 300,
+            fade: true,
+            cssEase: 'linear'
+        });
+
+        $('#product-view').slick({
+            slidesToShow: 3,
+            slidesToScroll: 3,
+            arrows: true,
+            centerMode: true,
+            focusOnSelect: true,
+            variableWidth: true
+        });
+
+        $("#btnAdicionar").click(function (item) {
+            AdicionarCarrinho(idProduto, $("#txtQt").val(), produto.IdCliente);
+        });
+
+
+        // PRODUCT ZOOM
+        $('#product-main-view .product-view').zoom();
+        $("#product-main-view img").css("max-width", "455px");
+
+    });
+
+    ObterProdutoServico = function (idProduto) {
+
+        url = URL_SERVICO + 'produtos/' + idProduto;
+        retorno = {};
+
+        Js.Util.Get(url,
+            null,
+            function (response) { //OnSucess
+
+                if (response.Valido) {
+
+                    if (response.Dados != null && response.Dados != undefined) {
+                        retorno = response.Dados;
+                    }
+                }
+            },
+            function (xhr, ajaxOptions, thrownError) { //OnError
+
+                if (xhr.status == 400 || xhr.status == 500) {
+
+                    var mensagem = "";
+
+                    var data = JSON.parse(xhr.responseText);
+
+                    $.each(data.Mensagens, function () {
+
+                        if (this.Campo == null)
+                            mensagem += this.Mensagem + "\n";
+
+                    });
+
+                    if (mensagem != "")
+                        Js.Util.Janela.MostrarMensagemErro(mensagem);
+
+                }
+                else
+                    Js.Util.Janela.MostrarMensagemErro(mensagem);
+            },
+            false,
+            function (request) {
+                request.setRequestHeader("authorization", "Bearer " +  USUARIO_TOKEN);
+                request.setRequestHeader("External", "true");
+            });
+
+        return retorno;
+    }
+
+</script>
+<!-- section -->
+<div class="section">
+    <!-- container -->
+    <div class="container">
+        <!-- row -->
+        <div class="row">
+            <!--  Product Details -->
+            <div class="product product-details clearfix">
+                <div class="col-md-6">
+                    <div id="product-main-view">
+                    </div>
+                    <div id="product-view">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="product-body">
+                        <div class="product-label">
+                            <span id="lblTituloVariavel" class="hidden"></span>
+                            <span class="sale hidden" id="lblDesconto"></span>
+                        </div>
+                        <h2 class="product-name" id="lblTitulo"></h2>
+                        <h3 class="product-price"><label id="lblValor"></label> <del class="product-old-price hidden" id="lblValorAnterior"></del></h3>
+                        <p><strong>Categoria:</strong> <label id="lblCategoria"></label></p>
+                        <p id="lblDescricao">
+                        </p>
+                        <br />
+                        <div class="product-btns hidden" id="divComprar">
+                            <div class="qty-input">
+                                <span class="text-uppercase">Qt: </span>
+                                <input class="input" type="number" value="1" id="txtQt">
+                            </div>
+                            <button class="primary-btn hidden" id="btnAdicionar"><i class="fa fa-shopping-cart"></i> Adicionar</button>
+                            <button id="btnIndisponivel" class="savoia-botao-Indisponivel hidden" disabled=disabled onClick="return false;" ><i class="fa fa-exclamation-triangle"></i> Indisponivel</button>
+
+                        </div>
+                   
+                     
+                    </div>
+                <div class="col-md-12">
+                        <hr />
+                </div>
+
+            </div>
+            <!-- /Product Details -->
+        </div>
+        <!-- /row -->
+    </div>
+    <!-- /container -->
+</div>
+<!-- /section -->
+<!-- section -->
+    <div class="section">
+        <!-- container -->
+        <div class="container">
+            <div class="row">
+                <!-- section title -->
+                <div class="col-md-12">
+                    <div class="section-title">
+                        <h2 class="title">Promoções da semana</h2>
+                        <div class="pull-right">
+                            <div class="product-slick-dots-1 custom-dots">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- section title -->
+                <!-- Product Slick -->
+                <div class="col-md-12 col-sm-9 col-xs-9">
+                    <div class="row">
+                        <div id="divProdutoPromocao">
+                        </div>
+                    </div>
+                </div>
+                <!-- /Product Slick -->
+            </div>
+        
+            <!-- /home slick -->
+        </div>
+        <!-- /container -->
+    </div>
+<!-- /section -->

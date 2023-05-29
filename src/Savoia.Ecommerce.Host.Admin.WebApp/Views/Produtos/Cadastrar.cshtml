@@ -1,0 +1,607 @@
+﻿@using Savoia.Ecommerce.Host.Admin.WebApp.Controllers
+@using Savoia.Ecommerce.Host.Admin.WebApp.Util
+@{
+    Layout = "~/Views/Shared/_LayoutPopup.cshtml";
+}
+
+
+@section Scripts
+    {
+
+
+    <link rel="stylesheet" href="~/lib/lightbox2-master/dist/css/lightbox.min.css">
+    <script src="~/lib/lightbox2-master/dist/js/lightbox.min.js"></script>
+
+    <style>
+        input[type="file"] {
+            display: none;
+        }
+
+        .custom-file-upload {
+            border: 1px solid #ccc;
+            display: inline-block;
+            padding: 6px 12px;
+            cursor: pointer;
+        }
+    </style>
+    <script>
+
+        var _nivelPopup = '@ViewData["nivelPopup"]';
+        var _funcaoPosGravacao = @ViewData["funcaoPosGravacao"];
+        var _acao = '@ViewData["acao"]';
+        var _id = '@ViewData["id"]';
+        var _mensagemExcluir = '@ConstantesWeb.MENSAGEM_REGISTRO_EXCLUIR'
+        var _urlApiEcommerce = '@ViewData["apiEcommerce"]'
+
+        $(document).ready(function () {
+
+            Js.Util.TratarEnterForm("frmPrincipal", "btnSalvar");
+            TratarAcao();
+            TratarUsuarioPerfil();
+
+            $("form").validate().settings.ignore = "";
+
+            if (_acao == Constantes.ACAO_ALTERAR) {
+                CarregarDados();
+            }
+
+            CarregarCategoria(_urlApiEcommerce, $("#IdCategoria"));
+
+            ListarRamoAtividade();
+
+            $('#ValorVenda').mask('00000000000000,00', { reverse: true });
+            $('#Largura').mask('00000000000000,00', { reverse: true });
+            
+            $('#Altura').mask('00000000000000,00', { reverse: true });
+            $('#Peso').mask('00000000000000,00', { reverse: true });
+            $('#Comprimento').mask('00000000000000,00', { reverse: true });
+
+            lightbox.option({
+                'resizeDuration': 0,
+                'fadeDuration' : 100,
+                'wrapAround': true,
+                'showImageNumberLabel' : false,
+                'albumLabel': "Imagem %1 de %2"
+            })
+
+
+            $('input[type="file"]').change(function () {
+
+                var divImagens = "divImagens";
+
+                var files = $(this).prop("files");
+                var fdata = new FormData();
+                
+                for (var i = 0; i < files.length; i++) {
+
+                    fdata.append("files", files[i]);
+                }
+
+                if (files.length > 0) {
+                    $.ajax({
+                        type: "POST",
+                        url: _urlApiEcommerce + "produtos/imagens?idProduto=" + _id,
+                        beforeSend: function (xhr) {
+                            xhr.setRequestHeader("XSRF-TOKEN",
+                                $('input:hidden[name="__RequestVerificationToken"]').val());
+                            xhr.setRequestHeader("authorization",
+                                "Bearer " + USUARIO_TOKEN);
+                        },
+                        data: fdata,
+                        contentType: false,
+                        processData: false,
+                        success: function (response) {
+
+                            var imagens = "";
+
+                            $.each(response.Mensagens, function () {
+
+                                var url = _urlApiEcommerce + this.Mensagem.split('|')[1];
+
+                                var img = $('<img />')
+                                    .attr('src', "" + url + "")
+                                    .attr('width', "70px")
+                                    .attr('height', "70px")
+
+                                imagens+= "<a href='" + url + "' data-lightbox='example-set'>" +
+                                    "<div style='display: inline-block' align='center'><img src='" + url + "' width='70px' height='70px' nomeImagem='" + this.Mensagem.split('|')[0] + "'> </a><BR><a style=\"text-decoration:none\" nome='" + this.Mensagem.split('|')[0]+ "' title='Excluir Image' href=\"javascript: ExcluirImagem('" + this.Mensagem.split('|')[0] + "')\">x</a></div>";
+
+                            });
+
+                            $('#divImagens').append(imagens);
+
+                        },
+                        error: function (xhr, ajaxOptions, thrownError) { //OnError
+                            TratarErro(xhr, ajaxOptions, thrownError);
+                        }
+                    });
+                }
+                else {
+                    console.log('Please select a file.')
+                }
+
+            });
+            
+
+            //Botão Salvar
+            $("#btnSalvar").click(function () {
+
+                var imagens = [];
+                var idCliente ="";
+
+                if (USUARIO_TIPO == ConstantesEcommerce.CodUsuarioTipoAdmin)
+                    idCliente = $("#IdCliente").val()
+
+                var ramoAtividadesSelecionadas = [];
+
+                $("[id*=chkRamoAtividade]:checked").each(function () {
+
+                    ramoAtividadesSelecionadas.push($(this).attr("idRamoAtividade"));
+                });
+                 
+
+                //Pegando imagens
+                $('#divImagens img').each(function (index ) {
+
+                    if (index == 0)
+                        produtoPrincipal = true;
+                    else
+                        produtoPrincipal = false;
+
+                    imagens.push(
+                        {
+                            Nome: $(this).attr('nomeImagem'),
+                            Caminho: $(this).attr('src'),
+                            Principal: produtoPrincipal
+                        }
+                    )
+
+                });
+
+                LimparCampoValidacaoForm();
+
+                
+                var objRequest = {
+                    "RamosAtividadesDirecionado" : ramoAtividadesSelecionadas,
+                    "IdProduto": _id,
+                    "IdCategoria": $("#IdCategoria").val(),
+                    "IdCliente": idCliente,
+                    "CodInterno": $("#CodInterno").val(),
+                    "Titulo": $("#Titulo").val(),
+                    "Estoque": Js.Util.FormatarValorPadrao($("#Estoque").val()),
+                    "Descricao": $("#Descricao").val(),
+                    "ValorVenda": Js.Util.FormatarValorPadrao($("#ValorVenda").val()),
+                    "Largura": Js.Util.FormatarValorPadrao($("#Largura").val()),
+                    "Altura": Js.Util.FormatarValorPadrao($("#Altura").val()),
+                    "Peso": Js.Util.FormatarValorPadrao($("#Peso").val()),
+                    "Comprimento": Js.Util.FormatarValorPadrao($("#Comprimento").val()),
+                    "ProdutoPromocao": ($("#ProdutoPromocao:checked").val() ? true : false),
+                    "ProdutoLancamento": ($("#ProdutoLancamento:checked").val() ? true : false),
+                    "Obs": $("#Obs").val(),
+                    "Ativo": ($("#Ativo:checked").val() ? true : false) ,
+                    "Imagens": imagens
+                }
+
+
+                Js.Util.Post(_urlApiEcommerce + "produtos",
+                    objRequest
+                        ,
+                        function (response) { //OnSucess
+
+                        if (response != null && response.Valido) {
+                            Js.Util.Janela.MostrarMensagem(response.Mensagens[0].Mensagem, function () { Js.Util.Janela.FecharJanela(_nivelPopup) }, _funcaoPosGravacao);
+                        }
+
+                    },
+                    function (xhr, ajaxOptions, thrownError) { //OnError
+
+                        var existeValidacaoCampo = false;
+
+                        if (xhr.status == 400 || xhr.status == 500) {
+
+                            var data = JSON.parse(xhr.responseText);
+
+                            $.each(data.Mensagens, function () {
+
+                                if (this.Campo != null && this.Campo != '') {
+
+                                    TratarCampoValidacao(this.Campo, this.Mensagem);
+                                    existeValidacaoCampo = true;
+                                }
+
+                            });
+
+                            if (existeValidacaoCampo)
+                                Js.Util.ValidarForm($("#frmPrincipal"));
+
+                        }
+
+                        TratarErro(xhr, ajaxOptions, thrownError);
+                    },
+                    true,
+                    function (request) {
+                        request.setRequestHeader("authorization", "Bearer " +  USUARIO_TOKEN);
+                    });
+            });
+
+            //Botão excluir
+            $("#btnExcluir").click(
+                function () {
+
+                    url = _urlApiEcommerce + "produtos/" + _id;
+
+                    Js.Util.Janela.MostrarMensagemConfirmacao(_mensagemExcluir,
+                     function () {
+
+                    ConsumirServico
+                                ("DELETE",
+                                url,
+                                {
+                                },
+                                function (response) { //OnSucess
+
+                                    if (response != null && response.Valido)
+                                        Js.Util.Janela.MostrarMensagem(response.Mensagens[0].Mensagem, function () { Js.Util.Janela.FecharJanela(_nivelPopup) }, _funcaoPosGravacao);
+                                },
+                                function (xhr, ajaxOptions, thrownError) { //OnError
+                                    TratarErro(xhr, ajaxOptions, thrownError);
+                                },
+                        true,
+                        function (request) {
+                            request.setRequestHeader("authorization", "Bearer " +  USUARIO_TOKEN);
+                        });
+                });
+
+            });
+
+            //Botão Fechar
+            $("#btnFechar").click(function () {
+                parent.Pesquisar();
+                Js.Util.Janela.FecharJanela(_nivelPopup);
+            });
+
+
+
+        }); //Fim do Ready
+
+        /* ***********************************   INICIO DAS FUNÇÕES ************************************* */
+        TratarUsuarioPerfil = function () {
+
+            if (USUARIO_TIPO == ConstantesEcommerce.CodUsuarioTipoAdmin) {
+                $("#divCliente").removeClass("hidden")
+                CarregarCliente(_urlApiEcommerce, $("#IdCliente"));
+            }
+            else if(USUARIO_TIPO == ConstantesEcommerce.CodUsuarioTipoCliente){
+                $("#divCliente").addClass("hidden")
+                $("#IdCliente").empty();
+            }
+
+        }
+
+        TratarAcao = function (){
+
+            if(_acao == Constantes.ACAO_ALTERAR)
+            {
+                $("#btnExcluir").removeClass("hidden")
+
+            }
+            else
+            {
+                $("#btnExcluir").addClass("hidden")
+            }
+
+        }
+
+        CarregarDados = function () {
+
+            var url = _urlApiEcommerce + "produtos/" + _id;
+            Js.Util.Get(url,
+                null,
+                function (response) { //OnSucess
+
+                    if (response != null && response.Valido) {
+
+                        $("#CodInterno").val(response.Dados.CodInterno);
+                        $("#Titulo").val(response.Dados.Titulo);
+                        $("#Estoque").val(response.Dados.Estoque);
+
+                        $("#Descricao").val(response.Dados.Descricao);
+
+                        setTimeout(function () { $("#IdCategoria").val(response.Dados.IdCategoria)}, 300)
+                        setTimeout(function () { $("#IdCliente").val(response.Dados.IdCliente)}, 300)
+
+                        $("#ValorVenda").val(Js.Util.FormatarValorBrasil(response.Dados.ValorVenda, false));
+                        $("#Largura").val(Js.Util.FormatarValorBrasil(response.Dados.Largura, false));
+                        $("#Altura").val(Js.Util.FormatarValorBrasil(response.Dados.Altura, false));
+
+                        if (response.Dados.Peso != null)
+                            $("#Peso").val(Js.Util.FormatarValorBrasil(response.Dados.Peso, false));
+
+                        if (response.Dados.Comprimento != null)
+                            $("#Comprimento").val(Js.Util.FormatarValorBrasil(response.Dados.Comprimento, false));
+
+                        if (response.Dados.ProdutoPromocao == true)
+                            $("#ProdutoPromocao[value='true']").prop('checked', 'checked');
+
+                        if (response.Dados.ProdutoLancamento== true)
+                            $("#ProdutoLancamento[value='true']").prop('checked', 'checked');
+
+                        $("#Obs").val(response.Dados.Obs);
+
+                        if (response.Dados.Ativo == true)
+                            $("#Ativo[value='true']").prop('checked', 'checked');
+                        else
+                            $("#Ativo[value='false']").prop('checked', 'checked');
+
+
+                        //Carregando imagens
+                        
+                        $.each(response.Dados.Imagens, function () {
+                            var imagens = "";
+                            var url = _urlApiEcommerce + this.Caminho + "/" + this.Nome;
+
+                            var img = $('<img />')
+                                .attr('src', "" + url + "")
+                                .attr('width', "70px")
+                                .attr('height', "70px")
+
+                            imagens = "<a href='" + url + "' data-lightbox='example-set'>" +
+                                "<div style='display: inline-block' align='center'><img src='" + url + "' width='70px' height='70px' nomeImagem='" + this.Nome + "'> </a><BR><a nome='" + this.Nome + "' title='Excluir Image' href=\"javascript: ExcluirImagem('" + this.Nome + "')\">x</a></div>";
+
+                            $('#divImagens').append(imagens);
+
+                        });
+
+                        //Ramos de atividade selecionados
+                        var ramoAtividadeSelecionadas = response.Dados.RamosAtividadesDirecionado;
+                        
+                        if (response.Dados.RamosAtividadesDirecionado != null) {
+                            $.each(response.Dados.RamosAtividadesDirecionado, function() {
+
+                                $("#chkRamoAtividade_" + this).prop("checked", true);
+                            });
+                        }
+
+                       
+
+                    }
+                },
+                function (xhr, ajaxOptions, thrownError) { //OnError
+                    TratarErro(xhr, ajaxOptions, thrownError);
+                },
+                true,
+                function (request) {
+                    request.setRequestHeader("authorization", "Bearer " +  USUARIO_TOKEN);
+                });
+
+        }
+
+        ExcluirImagem = function (nome) {
+            $("img[nomeImagem='" + nome + "']").remove();
+            $("a[nome='" + nome + "']").remove();
+        }
+
+        ListarRamoAtividade = function () {
+
+        url = URL_SERVICO + 'ramos-atividades?ativo=true';
+        listaRetorno = {};
+
+        Js.Util.Get(url,
+            null,
+            function (response) { //OnSucess
+
+                if (response.Valido) {
+
+                    if (response.Dados != null && response.Dados != undefined) {
+                            
+                        //var tr = $("#tblRamoAtividade").append('<tr />').children('tr');
+
+
+                        var i = 0;
+                        var linha = "";
+                        $.each(response.Dados, function () {
+
+                            if (i == 0 )
+                                linha += "<TD width='200' style='vertical-align: top'>"
+                            else
+                                linha += "";
+
+                            linha +=    "<input class='form-check-input' type='checkbox' id='chkRamoAtividade_" + this.IdRamoAtividade + "' value='"  + this.IdRamoAtividade + "' idRamoAtividade='" + this.IdRamoAtividade + "'/>"
+                            linha +=    "          <label class='form-check-label' for='chkRamoAtividade_" + this.IdRamoAtividade + "'>" + this.Titulo + "</label><br>"
+                                        
+                            if(i==4)
+                                linha += "</td>"
+                                         
+                        i++;
+                                        
+                        if (i == 5) i = 0;
+                            });
+        
+                        if(i==4)
+                            linha += "</td>"
+       
+                        $("#tblRamoAtividade").html("<TR>" + linha + "</tr>");
+                        //tr.append(linha);
+                    }
+                }
+            },
+            function (xhr, ajaxOptions, thrownError) { //OnError
+
+                if (xhr.status == 400 || xhr.status == 500) {
+
+                    var mensagem = "";
+
+                    var data = JSON.parse(xhr.responseText);
+
+                    $.each(data.Mensagens, function () {
+
+                        if (this.Campo == null)
+                            mensagem += this.Mensagem + "\n";
+
+                    });
+
+                    if (mensagem != "")
+                        Js.Util.Janela.MostrarMensagemErro(mensagem);
+
+                }
+                else
+                    Js.Util.Janela.MostrarMensagemErro(mensagem);
+            },
+            false,
+            function (request) {
+                request.setRequestHeader("authorization", "Bearer " +  USUARIO_TOKEN);
+                request.setRequestHeader("External", "true");
+            });
+
+        return listaRetorno;
+
+    }
+        /* ***********************************   FIM DAS FUNÇÕES ************************************* */
+
+    </script>
+
+}
+
+<form role="form" id="frmPrincipal">
+    <div class="row">
+        <div class="col-md-12">
+
+            <div class="form-row">
+                  <div class="form-group col-md-3" id="divCliente">
+                    <label>Cliente</label>
+                    <select class="form-control input-sm" id="IdCliente" name="IdCliente"></select>
+                </div>
+
+                <div class="form-group col-md-3">
+                    <label>Código Interno</label>
+                    <input class="form-control input-sm" type="text" name="CodInterno" id="CodInterno">
+                </div>
+                <div class="form-group col-md-3">
+                    <label>Categoria</label>
+                    <select class="form-control input-sm" id="IdCategoria" name="IdCategoria"></select>
+                </div>
+
+                <div class="form-group col-md-2">
+
+                    <label class="control-label">Status</label><br />
+                    <input type="radio" value="true" checked="checked" name="Ativo" id="Ativo" /> <label>Ativo</label>
+                    <input type="radio" value="false" style="margin-left:20px" name="Ativo" id="Ativo" /> <label>Inativo</label>
+
+                </div>
+
+            </div>
+                 <div class="form-row">
+
+                    <div class="form-group col-md-9">
+                        <label>Titulo</label>
+                        <input class="form-control input-sm" type="text" name="Titulo" id="Titulo">
+                    </div>
+
+                        <div class="form-group col-md-2">
+                        <label>Estoque Disponivel</label>
+                        <input class="form-control input-sm savoia-campo-numero" type="text" name="Estoque" id="Estoque">
+                    </div>
+
+
+                </div>
+                <div class="form-row">
+
+
+                    <div class="form-group col-md-2">
+                        <label>Valor Venda</label>
+                        <input class="form-control input-sm" type="text" name="ValorVenda" id="ValorVenda">
+                    </div>
+                    <div class="form-group col-md-2">
+                        <label>Peso</label>
+                        <input class="form-control input-sm" type="text" name="Peso" id="Peso">
+                    </div>
+
+                    <div class="form-group col-md-2">
+                        <label>Largura</label>
+                        <input class="form-control input-sm savoia-campo-valor" type="text" name="Largura" id="Largura">
+                    </div>
+
+                    <div class="form-group col-md-2">
+                        <label>Altura</label>
+                        <input class="form-control input-sm savoia-campo-valor" type="text" name="Altura" id="Altura">
+                    </div>
+
+                    <div class="form-group col-md-2">
+                        <label>Comprimento</label>
+                        <input class="form-control input-sm  savoia-campo-valor" type="text" name="Comprimento" id="Comprimento">
+                    </div>
+              
+
+                <div class="form-group col-md-2">
+                    <input type="checkbox" class="form-check-input" id="ProdutoPromocao" name="ProdutoPromocao" value="true" style="margin-top:15px">&nbsp;Promoção<br />
+                    <input type="checkbox" class="form-check-input" id="ProdutoLancamento" name="ProdutoLancamento" value="true">&nbsp;Lançamento
+                </div>
+
+                </div>
+
+           <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label>Descrição</label>
+                    <textarea rows="6" class="form-control input-sm" id="Descricao" name="Descricao"></textarea>
+                </div>
+               <div class="form-group col-md-6">
+                    <label>Direcionar produtos aos ramos de atividade:</label>
+                     <table id="tblRamoAtividade" ></table>
+                </div>
+              
+            </div>
+
+                <div class="form-row">
+                    <div class="form-group col-md-12">
+
+            </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label>Imagens Zoom(1000px X 1000px)</label>
+                    <label for="fUpload" class="custom-file-upload">
+                        <i class="glyphicon glyphicon-cloud-upload"></i> Selecionar (PNG/JPG)
+                    </label>
+
+                    <input type="file" id="fUpload" name="files" multiple class="file"  />
+
+                    <div id="divImagens" style="width:auto;margin-top:5px;"></div>
+                </div>
+
+                  <div class="form-group col-md-6">
+                    <label>Observação</label>
+                    <textarea rows="2" class="form-control input-sm" id="Obs" name="Obs"></textarea>
+                </div>
+            </div>
+
+
+        </div>
+
+    </div>
+
+    <div class="row savoia-row-rodape-top">
+        <div class="col-md-12">
+            <nav class="navbar-savoia navbar-fixed-bottom" data-spy="affix">
+                <div class="container-fluid">
+                    <div class="navbar-header" style="margin-bottom:5px">
+                        <button type="button" class="btn btn-primary" id="btnSalvar">
+                            <span class="glyphicon glyphicon-save"></span> Salvar
+                        </button>
+                        <button type="button" class="btn btn-default" id="btnExcluir">
+                            <span class="glyphicon glyphicon-trash"></span> Excluir
+                        </button>
+                        <button type="button" class="btn btn-default" id="btnFechar">
+                            <span class="glyphicon glyphicon-ban-circle"></span> Fechar
+                        </button>
+
+                    </div>
+                </div>
+            </nav>
+        </div>
+    </div>
+
+</form>
+
+<form method="post" id="frmUpload" action="aa"
+      enctype="multipart/form-data"></form>

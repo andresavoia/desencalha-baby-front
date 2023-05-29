@@ -1,0 +1,1054 @@
+﻿@using Savoia.Ecommerce.Host.Admin.WebApp.Controllers
+@using Savoia.Ecommerce.Host.Admin.WebApp.Util
+@{
+    Layout = "~/Views/Shared/_LayoutPopup.cshtml";
+}
+
+
+@section Scripts
+    {
+
+    <style>
+    </style>
+    <script>
+
+        var _nivelPopup = '@ViewData["nivelPopup"]';
+        var _funcaoPosGravacao = @ViewData["funcaoPosGravacao"];
+        var _acao = '@ViewData["acao"]';
+        var _id = '@ViewData["id"]';
+        var _idVendedor = '@ViewData["idVendedor"]';
+        var _mensagemExcluir = '@ConstantesWeb.MENSAGEM_REGISTRO_EXCLUIR'
+        var _urlApiEcommerce = '@ViewData["apiEcommerce"]'
+        var _codPedidoStatus = 0;
+
+        $(document).ready(function () {
+
+            if (_acao == Constantes.ACAO_ALTERAR) {
+                CarregarDados();
+            }
+
+            //Botão Aguardando Pagto
+            $("#btnAguardandoPagto").click(function () {
+
+                if ($('#divBoletos a').length <=0) {
+                    Js.Util.Janela.MostrarMensagemErro("Selecione pelo menos um boleto para alterar para o status 'Aguardando Pagamento'.");
+                    $('#divBoletos').focus();
+                }
+                else {
+                    AbrirJanelaJustificativa(ConstantesEcommerce.CodPedidoStatusAguardandoPagto);
+                }
+
+            });
+
+
+            //Enviar Novo Boleto
+            $("#btnEnviarNovoBoleto").click(function () {
+
+                if ($('#divBoletos a').length <=1) {
+                    Js.Util.Janela.MostrarMensagemErro("Adicione um novo boleto para ser enviado'.");
+                    $('#divBoletos').focus();
+                }
+                else {
+                    AbrirJanelaJustificativa(ConstantesEcommerce.CodPedidoStatusAguardandoPagto);
+                }
+
+            });
+
+
+            //Botão imprimir
+            $('#btnImprimir').click(function () {
+
+                    Js.Util.Janela.RetornarContextoIFrameJanela(_nivelPopup).print();
+
+            });
+
+
+            //Botão Nota Fiscal Gerada
+            $("#btnNotaFiscalGerada").click(function () {
+
+                if ($('#divNotas a').length <= 0) {
+                    Js.Util.Janela.MostrarMensagemErro("Selecione pelo menos uma nota fiscal para alterar para o status 'Nota Fiscal Gerada'.");
+                    $('#divNotas').focus();
+                }
+                else {
+                    AbrirJanelaJustificativa(ConstantesEcommerce.CodPedidoStatusNotaFiscalGerada);
+                }
+            });
+
+
+            //Botão Pedido Enviado - Código de Rastreio
+            $("#btnPedidoEnviado").click(function () {
+                if ($('#txtCodigoRastreio').val() == "") {
+                    Js.Util.Janela.MostrarMensagemErro("Informe o 'Código de Rastreio'.");
+                    $('#txtCodigoRastreio').focus();
+
+                } else if($('#txtLinkRastreio').val() == "") {
+                    Js.Util.Janela.MostrarMensagemErro("Informe o 'Link para Rastreio'.");
+                    $('#txtLinkRastreio').focus();
+
+                } else {
+                    AbrirJanelaJustificativa(ConstantesEcommerce.CodPedidoStatusPedidoEnviado);
+                }
+            });
+
+
+            //Botão Entregue
+            $("#btnEntregue").click(function () {
+
+                AbrirJanelaJustificativa(ConstantesEcommerce.CodPedidoStatusEntregue);
+
+            });
+
+            //Botão Cancelado
+            $("#btnCancelar").click(function () {
+
+                Js.Util.Janela.MostrarMensagemConfirmacao('Tem certeza que deseja cancelar este pedido?', function () {
+                    AbrirJanelaJustificativa(ConstantesEcommerce.CodPedidoStatusCancelado);
+                });
+
+            });
+
+            //Botão Fechar
+            $("#btnFechar").click(function () {
+                parent.Pesquisar();
+                Js.Util.Janela.FecharJanela(_nivelPopup);
+            });
+
+            $('input[type="file"]').change(function () {
+
+                var tipo = "";
+
+                if ($(this).attr('id') == "fUploadNota")
+                    tipo = "Notas";
+                else
+                    tipo = "Boletos";
+
+                var files = $(this).prop("files");
+                var fdata = new FormData();
+
+                for (var i = 0; i < files.length; i++) {
+
+                    fdata.append("files", files[i]);
+                }
+
+                if (files.length > 0) {
+                    $.ajax({
+                        type: "POST",
+                        url: _urlApiEcommerce + "pedidos/" + _id + "/arquivos?tipo=" + tipo,
+                        beforeSend: function (xhr) {
+                            xhr.setRequestHeader("XSRF-TOKEN",
+                                $('input:hidden[name="__RequestVerificationToken"]').val());
+                        },
+                        data: fdata,
+                        contentType: false,
+                        processData: false,
+                        success: function (response) {
+
+                            var arquivos = "";
+
+                            $.each(response.Mensagens, function () {
+
+                                var url = _urlApiEcommerce + this.Mensagem.split('|')[1];
+                                arquivos += "<div style='cursor:pointer;display: inline-block;border:1px solid whitesmoke;height:20px;margin:5px;text-decoration:none;' align='center'><img src='/images/ico-excluir-15x15.png' nome='" + this.Mensagem.split('|')[0] + "' title='Excluir Arquivo' onclick=\"javascript: ExcluirArquivo('" + this.Mensagem.split('|')[0] + "')\"></img>  " + "<a href='" + url + "' target='_blank' caminho='" + this.Mensagem.split('|')[1] + "'style='text-decoration: none' nome='" + this.Mensagem.split('|')[0] + "'>" + this.Mensagem.split('|')[0] + "</a>" + "<BR></div>";
+
+                            });
+
+
+                            $('#div' + tipo).append(arquivos);
+
+                        },
+                        error: function (xhr, ajaxOptions, thrownError) { //OnError
+                            TratarErro(xhr, ajaxOptions, thrownError);
+                        }
+                    });
+                }
+                else {
+                    console.log('Please select a file.')
+                }
+
+            });
+
+
+        }); //Fim do Ready
+
+        /* ***********************************   INICIO DAS FUNÇÕES ************************************* */
+
+        Salvar = function (codPedidoStatusNovo) {
+
+            var anexos = [];
+            var tipo = "";
+            var justificativa = $("#txtJustificativa").val();
+            var codigoRastreio = $("#txtCodigoRastreio").val();
+            var linkRastreio = $("#txtLinkRastreio").val();
+
+            $('#divBoletos a').each(function (index) {
+
+                anexos.push(
+                    {
+                        Nome: $(this).attr('nome'),
+                        Caminho: $(this).attr('caminho'),
+                        CodTipoAnexo: 1
+                    }
+                )
+            });
+
+            $('#divNotas a').each(function (index) {
+                anexos.push(
+                    {
+                        Nome: $(this).attr('nome'),
+                        Caminho: $(this).attr('caminho'),
+                        CodTipoAnexo: 2
+                    }
+                )
+            });
+
+            LimparCampoValidacaoForm();
+
+            ConsumirServico
+                ("PATCH",
+                _urlApiEcommerce + "pedidos",
+                {
+                    "IdPedido": _id,
+                    "CodPedidoStatus": codPedidoStatusNovo,
+                    "Observacao": justificativa,
+                    "IdVendedor" : _idVendedor,
+                    "Anexos" : anexos,
+                    "CodigoRastreio" : codigoRastreio,
+                    "LinkRastreio" : linkRastreio
+                }
+                ,
+                function (response) { //OnSucess
+
+                    if (response != null && response.Valido) {
+
+                        $("#txtJustificativa").val("");
+
+                        _codPedidoStatus = codPedidoStatusNovo;
+                        $("#DescPedidoStatus").html(response.DescPedidoStatus);
+
+
+
+                        Js.Util.Janela.MostrarMensagem(response.Mensagens[0].Mensagem, function () { TratarAcao();} );
+                    }
+
+
+                },
+                function (xhr, ajaxOptions, thrownError) { //OnError
+
+                    var existeValidacaoCampo = false;
+
+                    if (xhr.status == 400 || xhr.status == 500) {
+
+                        var data = JSON.parse(xhr.responseText);
+
+                        $.each(data.Mensagens, function () {
+
+                            if (this.Campo != null && this.Campo != '') {
+
+                                TratarCampoValidacao(this.Campo, this.Mensagem);
+                                existeValidacaoCampo = true;
+                            }
+
+                        });
+
+                        if (existeValidacaoCampo)
+                            Js.Util.ValidarForm($("#frmPrincipal"));
+
+                    }
+
+                    TratarErro(xhr, ajaxOptions, thrownError);
+                },
+                true,
+                function (request) {
+                    request.setRequestHeader("authorization", "Bearer " +  USUARIO_TOKEN);
+                });
+
+        }
+
+        TratarAcao = function (){
+
+
+
+            $('#btnCancelar').removeClass("hidden");
+
+            if (_codPedidoStatus == ConstantesEcommerce.CodPedidoStatusPendente) {
+
+                $('#btnAguardandoPagto').removeClass("hidden");
+                $('#lblBoletos').removeClass('hidden');
+                $('#lblNotas').addClass('hidden');
+                $('#btnEnviarNovoBoleto').addClass('hidden');
+
+                $('#btnPedidoEnviado').addClass('hidden');
+                $('#divInputCodigoRastreio').addClass('hidden');
+                $('#divCodigoRastreio').addClass('hidden');
+                $('#divInputLinkRastreio').addClass('hidden');
+                $('#divLinkRastreio').addClass('hidden');
+            }
+
+            if (_codPedidoStatus == ConstantesEcommerce.CodPedidoStatusAguardandoPagto) {
+
+                $('#btnAguardandoPagto').addClass("hidden");
+                $('#btnNotaFiscalGerada').removeClass("hidden");
+                $('#lblNotas').removeClass('hidden');
+                $('#lblBoletosAlerta').addClass('hidden');
+
+                //$('#divBoletos img').addClass('hidden');
+                $('#lblBoletos').removeClass('hidden');
+                $('#btnEnviarNovoBoleto').removeClass('hidden');
+                $('#btnPedidoEnviado').addClass('hidden');
+
+                $('#divInputCodigoRastreio').addClass('hidden');
+                $('#divCodigoRastreio').addClass('hidden');
+                $('#divInputLinkRastreio').addClass('hidden');
+                $('#divLinkRastreio').addClass('hidden');
+
+            }
+
+            if (_codPedidoStatus == ConstantesEcommerce.CodPedidoStatusNotaFiscalGerada) {
+
+                $('#btnNotaFiscalGerada').addClass("hidden");
+                $('#btnEntregue').addClass("hidden");
+                $('#lblBoletos').addClass('hidden');
+                $('#lblNotas').addClass('hidden');
+                $('#lblBoletosAlerta').removeClass('hidden');
+                $('#lblNotasAlerta').removeClass('hidden');
+                $('#btnEnviarNovoBoleto').addClass('hidden');
+
+                $('#btnPedidoEnviado').removeClass('hidden');
+                $('#divInputCodigoRastreio').removeClass('hidden');
+                $('#divCodigoRastreio').addClass('hidden');
+                $('#divInputLinkRastreio').removeClass('hidden');
+                $('#divLinkRastreio').addClass('hidden');
+            }
+
+            if (_codPedidoStatus == ConstantesEcommerce.CodPedidoStatusPedidoEnviado) {
+
+                $('#btnNotaFiscalGerada').addClass("hidden");
+                $('#btnEntregue').removeClass("hidden");
+                $('#lblBoletos').addClass('hidden');
+                $('#lblNotas').addClass('hidden');
+                $('#lblBoletosAlerta').removeClass('hidden');
+                $('#lblNotasAlerta').removeClass('hidden');
+                $('#btnEnviarNovoBoleto').addClass('hidden');
+
+                $('#btnPedidoEnviado').addClass('hidden');
+                $('#divInputCodigoRastreio').addClass('hidden');
+                $('#divCodigoRastreio').removeClass('hidden');
+                $('#divInputLinkRastreio').addClass('hidden');
+                $('#divLinkRastreio').removeClass('hidden');
+            }
+
+            //qd for entregue
+            if (_codPedidoStatus == ConstantesEcommerce.CodPedidoStatusEntregue) {
+
+                $('#btnEntregue').addClass("hidden");
+                $('#lblBoletos').addClass('hidden');
+                $('#lblNotas').addClass('hidden');
+                $('#lblBoletosAlerta').removeClass('hidden');
+                $('#lblNotasAlerta').removeClass('hidden');
+                $('#btnCancelar').addClass("hidden");
+                $('#btnEnviarNovoBoleto').addClass('hidden');
+
+                $('#btnPedidoEnviado').addClass('hidden');
+                $('#divInputCodigoRastreio').addClass('hidden');
+                $('#divCodigoRastreio').removeClass('hidden');
+                $('#divInputLinkRastreio').addClass('hidden');
+                $('#divLinkRastreio').removeClass('hidden');
+            }
+
+            if (_codPedidoStatus == ConstantesEcommerce.CodPedidoStatusCancelado) {
+                $('#btnEntregue').addClass("hidden");
+                $('#btnNotaFiscalGerada').addClass("hidden");
+                $('#btnAguardandoPagto').addClass("hidden");
+                $('#btnCancelar').addClass("hidden");
+
+                $('#btnCancelado').addClass("hidden");
+                $('#lblBoletos').addClass('hidden');
+                $('#lblNotas').addClass('hidden');
+                $('#btnEnviarNovoBoleto').addClass('hidden');
+
+                $('#btnPedidoEnviado').addClass('hidden');
+                $('#divInputCodigoRastreio').addClass('hidden');
+                $('#divCodigoRastreio').addClass('hidden');
+                $('#divInputLinkRastreio').addClass('hidden');
+                $('#divLinkRastreio').addClass('hidden');
+            }
+        }
+
+        CarregarDados = function () {
+
+            var url = _urlApiEcommerce + "pedidos/" + _id;
+
+            if (USUARIO_TIPO == ConstantesEcommerce.CodUsuarioTipoAdmin) {
+               url += "?idVendedor=" + _idVendedor;
+            }
+
+            Js.Util.Get(url,
+                null,
+                function (response) { //OnSucess
+
+                    if (response != null && response.Valido) {
+
+                        _codPedidoStatus = response.Dados.PedidoVendedor[0].CodPedidoVendedorStatus;
+                        $("#IdPedido").text(response.Dados.IdPedido);
+                        $("#DescPedidoStatus").text(response.Dados.PedidoVendedor[0].DescPedidoStatus);
+                        $("#DataCadastro").html("<strong>Data Emissão:</strong> " + Js.Util.FormatarData(response.Dados.DataCadastro, "data-ptBr", 'isoDateTime'));
+                        $("#DescFreteTipo").text(response.Dados.DescFreteTipoUtilizacao);
+                        $("#TipoValor").text("Padrão");
+
+                        $("#CodInterno").text(response.Dados.Cliente.CodInterno);
+                        $("#NomeOuRazao").text(response.Dados.Cliente.NomeOuRazao);
+                        $("#ApelidoOuFantasia").text(response.Dados.Cliente.ApelidoOuFantasia);
+
+                        $("#CpfOuCnpj").text(response.Dados.Cliente.CpfOuCnpj);
+                        $("#EmailPrincipal").text(response.Dados.Cliente.EmailPrincipal);
+                        $("#EmailAlternativo").text(response.Dados.Cliente.EmailAlternativo);
+
+                        $("#Contato").text(response.Dados.Cliente.Contato);
+                        $("#Telefone1").text(response.Dados.Cliente.Telefone1);
+                        $("#Telefone2").text(response.Dados.Cliente.Telefone2);
+
+                        $("#Obs").text(response.Dados.Cliente.Obs);
+
+                        var endereco = "";
+
+                        if (response.Dados.Cliente.EnderecoEntrega.Endereco != null)
+                            endereco += response.Dados.Cliente.EnderecoEntrega.Endereco;
+
+                        if (response.Dados.Cliente.EnderecoEntrega.Complemento != null)
+                            endereco += " - " + response.Dados.Cliente.EnderecoEntrega.Complemento;
+
+
+                        if (response.Dados.Cliente.EnderecoEntrega.Cep != null)
+                            endereco += " - " + response.Dados.Cliente.EnderecoEntrega.Cep;
+
+                        if (response.Dados.Cliente.EnderecoEntrega.Cidade != null)
+                            endereco += " - " + response.Dados.Cliente.EnderecoEntrega.Cidade.Titulo;
+
+                        if (response.Dados.Cliente.EnderecoEntrega.Cidade.Estado.UF != null)
+                            endereco += " - " + response.Dados.Cliente.EnderecoEntrega.Cidade.Estado.UF;
+
+
+                        $("#EnderecoEntrega_Endereco").html(endereco);
+
+                        var tbody = $("#tblPrincipalResultado").append('<tbody />').children('tbody');
+
+                        $.each(response.Dados.PedidoVendedor, function () {
+                            $.each(this.Itens, function () {
+
+                                var urlImagem = _urlApiEcommerce + this.CaminhoImagemPrincipal;
+
+                                var linha = "<tr linhaGrid='true'  class='nopadding' chaveGrid='" + this.IdProduto + "'>";
+                                linha += "<td ><img src='" + urlImagem + "' width='70px' height='70px' nomeImagem='" + this.Titulo + "'></td>";
+                                linha += "<td >" + this.Titulo + "</td>";
+                                linha += "<td >" + Js.Util.FormatarValorBrasil(this.Valor, true) + "</td>";
+                                linha += "<td >" + this.Qt + "</td>";
+                                linha += "<td >" + Js.Util.FormatarValorBrasil(this.ValorTotal, true) + "</td>";
+                                linha += "</tr>";
+
+                                tbody.append(linha);
+                                linhaAdicionada = tbody.find('tr:last');
+                            });
+
+                            $("#DescFreteTipo").text(this.DescFreteTipo);
+                            $("#DataPrevisaoEntrega").text(Js.Util.FormatarData(this.DataPrevisaoEntrega, "data-ptBr", 'isoDateTime'));
+
+                            $("#ValorTotal").text(Js.Util.FormatarValorBrasil(this.ValorTotal, true));
+                            $("#ValorTotalFrete").text(Js.Util.FormatarValorBrasil(this.ValorTotalFrete, true));
+                            $("#ValorTotalComFrete").text(Js.Util.FormatarValorBrasil(this.ValorTotalComFrete, true));
+
+                        });
+
+                        var boletos = "";
+                        var notas = "";
+                        
+                        $.each(response.Dados.PedidoVendedor, function () {
+                        
+                            $.each(this.Anexos, function () {
+
+                                var url = _urlApiEcommerce + this.Caminho;
+                                var objeto = "<div style='cursor:pointer;display: inline-block;border:1px solid whitesmoke;height:20px;margin:5px;text-decoration:none;' align='center'><img src='/images/ico-excluir-15x15.png' nome='" + this.Nome + "' title='Excluir Arquivo' onclick=\"javascript: ExcluirArquivo('" + this.Nome + "')\"></img>  " + "<a href='" + url + "' target='_blank' caminho='" + this.Caminho + "'style='text-decoration: none' nome='" + this.Nome + "'>" + this.Nome + "</a>" + "<BR></div>";
+                                if (this.CodTipoAnexo == ConstantesEcommerce.CodPedidoTipoAnexoBoleto)
+                                    boletos += objeto;
+                                else
+                                    notas += objeto;
+                            });
+
+                        });
+
+                        if(boletos!="")
+                            $('#divBoletos').append(boletos);
+
+                        if (notas != "")
+                            $('#divNotas').append(notas);
+
+                        var tbodyTracking = $("#tblTrackingResultado").append('<tbody />').children('tbody');
+
+
+                        $.each(response.Dados.PedidoVendedor, function () {
+                            if (this.CodPedidoVendedorStatus == ConstantesEcommerce.CodPedidoStatusPedidoEnviado || this.CodPedidoVendedorStatus == ConstantesEcommerce.CodPedidoStatusEntregue) {
+                                $("#lblCodigoRastreio").text(this.Rastreio.CodigoRastreio);
+                                $("#aLinkRastreio").text(this.Rastreio.LinkRastreio);
+                                $("#aLinkRastreio").attr("href", this.Rastreio.LinkRastreio);
+                            }
+                        });
+
+                        
+                        $.each(response.Dados.PedidoVendedor, function () {
+                            $.each(this.Logs, function () {
+
+                                var linha = "<tr linhaGrid='true'>";
+                                linha += "<td >" + Js.Util.FormatarData(this.DataAlteracao, "data-hora-ptBr", 'isoDateTime') + "</td>";
+                                linha += "<td >" + this.DescPedidoStatus + "</td>";
+                                linha += "<td >" + this.UsuarioAlteracao + "</td>";
+                                linha += "<td >" + this.Observacao + "</td>";
+                                linha += "</tr>";
+
+                                tbodyTracking.append(linha);
+                            });
+                        });
+
+                        TratarAcao();
+
+                    }
+                },
+                function (xhr, ajaxOptions, thrownError) { //OnError
+                    TratarErro(xhr, ajaxOptions, thrownError);
+                },
+                true,
+                function (request) {
+                    request.setRequestHeader("authorization", "Bearer " +  USUARIO_TOKEN);
+                });
+
+        }
+
+        AbrirJanelaJustificativa = function (codPedidoStatus) {
+
+            $("#divJustificativa").removeClass("hidden");
+
+            $("#btnSalvarJustificativa").unbind("click");
+            $("#btnSalvarJustificativa").click(function () {
+
+                $("#divJustificativa").addClass("hidden");
+                _modalJustificativa.close();
+                //Salvando o registro
+                Salvar(codPedidoStatus)
+
+            });
+
+            $("#btnFecharJustificativa").unbind("click");
+            $("#btnFecharJustificativa").click(function () {
+                $("#divJustificativa").addClass("hidden");
+                _modalJustificativa.close();
+            });
+
+            _modalJustificativa = new BootstrapDialog({
+                message: $message = $("#divJustificativa"),
+                title: 'Justificativa de alteração de status',
+                closable: false,
+                autodestroy: false,
+                size: BootstrapDialog.SIZE_NORMAL
+            });
+            _modalJustificativa.realize();
+
+            _modalJustificativa.open();
+
+        }
+
+
+
+        ExcluirArquivo = function (nome) {
+
+            var anexo = PesquisarAnexo(nome);
+
+            if (_codPedidoStatus == ConstantesEcommerce.CodPedidoStatusPendente) {
+                
+                $("img[nome='" + nome + "']").remove();
+                $("a[nome='" + nome + "']").remove();
+
+            } 
+            else if(_codPedidoStatus == ConstantesEcommerce.CodPedidoStatusAguardandoPagto) {
+                
+                //Se for do tipo boleto
+                if(anexo.CodTipoAnexo == 1) {
+                    AbrirJanelaJustificativaExclusaoAnexo(anexo);
+
+                    $("img[nome='" + nome + "']").remove();
+                    $("a[nome='" + nome + "']").remove();
+
+                }else {
+                    Js.Util.Janela.MostrarMensagem("Não é possível excluir esse anexo.");
+                }
+
+            }
+            else if(_codPedidoStatus == ConstantesEcommerce.CodPedidoStatusNotaFiscalGerada) {
+
+                //Se for do tipo nota fiscal
+                if(anexo.CodTipoAnexo == 2) {
+                    AbrirJanelaJustificativaExclusaoAnexo(anexo);
+
+                    $("img[nome='" + nome + "']").remove();
+                    $("a[nome='" + nome + "']").remove();
+
+                } else {
+                    Js.Util.Janela.MostrarMensagem("Não é possível excluir esse anexo.");
+                }
+
+            }
+            else {
+                Js.Util.Janela.MostrarMensagem("Não é mais possível excluir um anexo.");
+            }
+        }
+
+
+        PesquisarAnexo = function(nome) {
+
+            var anexos = [];
+
+            $('#divBoletos a').each(function (index) {
+                anexos.push(
+                    {
+                        Nome: $(this).attr('nome'),
+                        Caminho: $(this).attr('caminho'),
+                        CodTipoAnexo: 1
+                    }
+                )
+            });
+
+            $('#divNotas a').each(function (index) {
+                anexos.push(
+                    {
+                        Nome: $(this).attr('nome'),
+                        Caminho: $(this).attr('caminho'),
+                        CodTipoAnexo: 2
+                    }
+                )
+            });
+
+            var obj = anexos.find(function(_obj){
+                return _obj.Nome == nome;
+            });
+
+            return obj;
+        }
+
+       
+
+        AbrirJanelaJustificativaExclusaoAnexo = function (anexo) {
+
+            $("#divJustificativa").removeClass("hidden");
+
+            $("#btnSalvarJustificativa").unbind("click");
+            $("#btnSalvarJustificativa").click(function () {
+
+                $("#divJustificativa").addClass("hidden");
+                _modalJustificativa.close();
+                ExcluirAnexo(anexo);
+
+            });
+
+            $("#btnFecharJustificativa").unbind("click");
+            $("#btnFecharJustificativa").click(function () {
+                $("#divJustificativa").addClass("hidden");
+                _modalJustificativa.close();
+            });
+
+            var msgTitle = "Deseja realmente excluir o anexo '" + anexo.Nome + "' ?";
+
+            _modalJustificativa = new BootstrapDialog({
+                message: $message = $("#divJustificativa"),
+                title: msgTitle,
+                closable: false,
+                autodestroy: false,
+                size: BootstrapDialog.SIZE_NORMAL
+            });
+            _modalJustificativa.realize();
+
+            _modalJustificativa.open();
+        }
+
+
+        ExcluirAnexo = function (anexo) {
+
+            var justificativa = $("#txtJustificativa").val();
+
+            ConsumirServico
+                ("PATCH",
+                _urlApiEcommerce + "pedidos/anexo",
+                {
+                    "IdPedido": _id,
+                    "Observacao": justificativa,
+                    "Anexo" : anexo
+                }
+                ,
+                function (response) { //OnSucess
+
+                    if (response != null && response.Valido) {
+
+                        Js.Util.Janela.MostrarMensagem(response.Mensagens[0].Mensagem, function () { TratarAcao();} );
+                    }
+
+                },
+                function (xhr, ajaxOptions, thrownError) { //OnError
+
+                    var existeValidacaoCampo = false;
+
+                    if (xhr.status == 400 || xhr.status == 500) {
+
+                        var data = JSON.parse(xhr.responseText);
+
+                        $.each(data.Mensagens, function () {
+
+                            if (this.Campo != null && this.Campo != '') {
+
+                                TratarCampoValidacao(this.Campo, this.Mensagem);
+                                existeValidacaoCampo = true;
+                            }
+
+                        });
+
+                        if (existeValidacaoCampo)
+                            Js.Util.ValidarForm($("#frmPrincipal"));
+
+                    }
+
+                    TratarErro(xhr, ajaxOptions, thrownError);
+                },
+                true,
+                function (request) {
+                    request.setRequestHeader("authorization", "Bearer " +  USUARIO_TOKEN);
+                });
+
+
+        }
+
+
+        /* ***********************************   FIM DAS FUNÇÕES ************************************* */
+
+    </script>
+    <style>
+        input[type="file"] {
+            display: none;
+        }
+
+        .custom-file-upload {
+            border: 1px solid #ccc;
+            display: inline-block;
+            padding: 6px 12px;
+            cursor: pointer;
+        }
+    </style>
+}
+<style>
+
+    a {
+        text-decoration: none;
+    }
+
+        a:link, a:visited {
+            color: black;
+        }
+
+        a:hover {
+            color: black;
+        }
+</style>
+<form method="post" id="frmUpload"
+      enctype="multipart/form-data"></form>
+
+<form id="frmJustificativa">
+    <div id="divJustificativa" class="form-horizontal hidden">
+        <div class="row">
+            <div class="form-group col-xs-12">
+                <div class="col-xs-2">
+                    Observação
+                </div>
+                <div class="col-xs-10">
+                    <textarea id="txtJustificativa" rows="4" class="form-control input-sm"></textarea>
+                </div>
+            </div>
+        </div>
+        <div class="row savoia-row-top">
+            <div class="col-sm-12">
+                <div class="form-group">
+                    <div class="col-sm-5">
+                        <button type="button" class="btn btn-primary " id="btnSalvarJustificativa">
+                            <span class="glyphicon glyphicon-save"></span> Confirmar
+                        </button>
+                        <button type="button" class="btn btn-default" id="btnFecharJustificativa">Fechar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+
+
+<div class="panel-group">
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Dados Pedido</strong></div>
+        <div class="panel-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <label class="control-label"><strong>Pedido N°:</strong></label>
+                    <label class="control-label text-success" id="IdPedido"></label>
+                </div>
+                <div class="col-md-6 text-right">
+                    <label class="control-label" id="DataCadastro"></label>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <label class="control-label"><strong>Status:</strong></label>
+                    <span class="label label-success" id="DescPedidoStatus"></span>
+                </div>
+                <div class="col-md-6 text-right">
+                    <label class="control-label"><strong>Tipo Valor:</strong></label>
+                    <label class="control-label" id="TipoValor"></label>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+<div class="panel-group">
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Dados Cliente</strong></div>
+        <div class="panel-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <label class="control-label"><strong>Cód Interno: </strong></label>
+                    <label class="control-label" id="CodInterno"></label>
+                </div>
+                <div class="col-md-5">
+                    <label class="control-label"><strong>Razão: </strong></label>
+                    <label class="control-label" id="NomeOuRazao"></label>
+                </div>
+                <div class="col-md-4">
+                    <label class="control-label"><strong>Fantasia: </strong></label>
+                    <label class="control-label" id="ApelidoOuFantasia"></label>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-3">
+                    <label class="control-label"><strong>CNPJ:</strong></label>
+                    <label class="control-label" id="CpfOuCnpj"></label>
+                </div>
+                <div class="col-md-5">
+                    <label class="control-label"><strong>Email:</strong></label>
+                    <label class="control-label" id="EmailPrincipal"></label>
+                </div>
+                <div class="col-md-4">
+                    <label class="control-label"><strong>Email Alt: </strong></label>
+                    <label class="control-label" id="EmailAlternativo"></label>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-3">
+                    <label class="control-label"><strong>Contato:</strong></label>
+                    <label class="control-label" id="Contato"></label>
+                </div>
+                <div class="col-md-5">
+                    <label class="control-label"><strong>Telefone 1:</strong></label>
+                    <label class="control-label" id="Telefone1"></label>
+                </div>
+                <div class="col-md-4">
+                    <label class="control-label"><strong>Telefone 2: </strong></label>
+                    <label class="control-label" id="Telefone2"></label>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <label class="control-label"><strong>Obs:</strong></label>
+                    <label class="control-label" id="Obs"></label>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <label class="control-label"><strong>Endereço de Entrega:</strong></label> <label class="control-label" id="EnderecoEntrega_Endereco"></label>
+                </div>
+
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="panel-group">
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Produtos</strong></div>
+        <div class="panel-body">
+            <div class="row">
+                <div class="col-md-12">
+                    <table class="table table-striped table-hover table-condensed" id="tblPrincipalResultado">
+                        <thead>
+                            <tr>
+                                <Th></Th>
+                                <th>Produto</th>
+                                <th>Valor</th>
+                                <th>Qt</th>
+                                <th>Valor Total</th>
+                            </tr>
+                        </thead>
+                    </table>
+                </div>
+            </div>
+
+
+            <div class="row">
+                <div class="col-md-12 text-right">
+                    <label class="control-label"><strong>Frete Tipo:</strong></label>
+                    <label class="control-label" id="DescFreteTipo"></label>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12 text-right">
+                    <label class="control-label"><strong>Valor Frete:</strong></label>
+                    <label class="control-label" id="ValorTotalFrete"></label>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 text-right">
+                    <label class="control-label"><strong>Valor Total:</strong></label>
+                    <label class="control-label" id="ValorTotal"></label>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 text-right">
+                    <label class="control-label"><strong>Valor Total com Frete:</strong></label>
+                    <label class="control-label" id="ValorTotalComFrete"></label>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 text-right">
+                    <label class="control-label"><strong>Data Previsão de Entrega:</strong></label>
+                    <label class="control-label" id="DataPrevisaoEntrega"></label>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="panel-group">
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Anexos</strong></div>
+        <div class="panel-body">
+            <div class="row">
+                <div class="form-group col-md-6">
+                    <label style="width:70px"><strong>Boletos</strong></label>
+                    <label for="fUploadBoleto" class="custom-file-upload hidden" id="lblBoletos">
+                        <i class="glyphicon glyphicon-cloud-upload"></i> Selecionar
+                    </label>
+                    <span class="label label-warning hidden" id="lblBoletosAlerta">Os boletos não serão mais enviados automaticamente para o cliente</span>
+
+                    <input type="file" id="fUploadBoleto" name="files" multiple class="file" />
+
+                    <div id="divBoletos" style="width:auto;margin-top:5px;"></div>
+
+                </div>
+                <div class="form-group col-md-6">
+
+                    <label style="width:70px"><strong>Notas</strong></label>
+
+                    <label for="fUploadNota" class="custom-file-upload hidden" id="lblNotas">
+                        <i class="glyphicon glyphicon-cloud-upload"></i> Selecionar
+                    </label>
+                    <span class="label label-warning hidden" id="lblNotasAlerta">As notas não serão mais enviados automaticamente para o cliente</span>
+
+                    <input type="file" id="fUploadNota" name="files" multiple class="file" />
+
+                    <div id="divNotas" style="width:auto;margin-top:5px;"></div>
+
+                </div>
+            </div>
+            <div class="row" id="divFim">
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="panel-group">
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Rastreio do Pedido</strong></div>
+        <div class="panel-body">
+            <div class="row">
+                <div class="col-lg-3">
+                    <label><strong>Código Rastreio </strong></label>
+                    <div id="divInputCodigoRastreio" class="hidden hidden-print"><input type="text" class="form-control input-sm" id="txtCodigoRastreio" name="txtCodigoRastreio"></div>
+                    <div id="divCodigoRastreio" class="hidden hidden-print"><label id="lblCodigoRastreio"></label></div>
+                </div>
+                <div class="col-md-6">
+                    <label><strong>Link Rastreio </strong></label>
+                    <div id="divInputLinkRastreio" class="hidden hidden-print"><input type="text" class="form-control input-sm" id="txtLinkRastreio" name="txtCodigoRastreio"></div>
+                        <div id="divLinkRastreio" class="hidden hidden-print"><a href="" id="aLinkRastreio" target="_blank"></a></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<div class="panel-group">
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Status Pedido</strong></div>
+        <div class="panel-body">
+            <div class="row">
+                <div class="col-md-12">
+                    <table class="table table-striped table-hover table-condensed" id="tblTrackingResultado">
+                        <thead>
+                            <tr>
+                                <Th>Data</Th>
+                                <th>Status</th>
+                                <th>Usuário</th>
+                                <th>Observação</th>
+                            </tr>
+                        </thead>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
+<div class="row savoia-row-rodape-top">
+    <div class="col-lg-12">
+        <nav class="navbar-savoia navbar-fixed-bottom" data-spy="affix">
+            <div class="container-fluid">
+                <div class="navbar-header" style="margin-bottom:5px">
+                    <button type="button" class="btn btn-primary hidden hidden-print" id="btnAguardandoPagto">
+                        <span class="glyphicon glyphicon-usd"></span> Aguardando Pagto
+                    </button>
+                    <button type="button" class="btn btn-primary hidden hidden-print" id="btnEnviarNovoBoleto">
+                        <span class="glyphicon glyphicon-usd"></span> Enviar Novo Boleto
+                    </button>
+                    <button type="button" class="btn btn-success hidden hidden-print" id="btnNotaFiscalGerada">
+                        <span class="glyphicon glyphicon-save"></span>Nota Fiscal Gerada
+                    </button>
+                    <button type="button" class="btn btn-success hidden hidden-print" id="btnPedidoEnviado">
+                        <span class="glyphicon glyphicon-save"></span>Enviar Código Rastreio
+                    </button>
+                    <button type="button" class="btn btn-success hidden hidden-print" id="btnEntregue">
+                        <span class="glyphicon glyphicon-save"></span> Entregue
+                    </button>
+                    <button type="button" class="btn btn-danger hidden hidden-print" id="btnCancelar">
+                        <span class="glyphicon glyphicon-lock"></span> Cancelar
+                    </button>
+                    <button type="button" class="btn btn-primary hidden-print" id="btnImprimir">
+                        <span class="glyphicon glyphicon-print"></span> Imprimir
+                    </button>
+                    <button type="button" class="btn btn-default hidden-print" id="btnFechar">
+                        <span class="glyphicon glyphicon-ban-circle"></span> Fechar
+                    </button>
+                </div>
+            </div>
+        </nav>
+    </div>
+</div>

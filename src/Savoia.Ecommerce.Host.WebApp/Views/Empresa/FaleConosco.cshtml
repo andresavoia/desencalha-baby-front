@@ -1,0 +1,168 @@
+﻿@{
+    Layout = "_LayoutPesquisa";
+}
+
+@section breadCrumb {
+    <div id="breadcrumb">
+        <div class="container">
+            <ul class="breadcrumb">
+                <li><a href="/">Home</a></li>
+                <li>Empresa</li>
+                <li class="active">Fale Conosco</li>
+            </ul>
+        </div>
+    </div>
+}
+<script>
+
+    $(document).ready(function () {
+
+        Js.Util.TratarEnterForm("checkout-form", "btnSalvar");
+        
+        $("#btnSalvar").click(
+            function () { Salvar() }
+        );
+
+    });
+
+
+    Salvar = function () {
+
+        LimparCampoValidacaoForm();
+
+        ConsumirServico
+            ("POST",
+            URL_SERVICO + "clientes/fale-conosco",
+            {
+                "Nome": $("#Nome").val(),
+                "Empresa": $("#Empresa").val(),
+                "Email": $("#Email").val(),
+                "Celular": $("#Celular").val(),
+                "Telefone": $("#Telefone").val(),
+                "Observacao": $("#Observacao").val() 
+            },
+            function (response) { //OnSucess
+
+                if (response != null && response.Valido) {
+
+                    $("#divCadastro").addClass('hidden');
+                    $("#divConfirmacao").removeClass('hidden');
+                }
+
+            },
+            function (xhr, ajaxOptions, thrownError) { //OnError
+
+                var existeValidacaoCampo = false;
+
+                if (xhr.status == 400 || xhr.status == 500) {
+
+                    var data = JSON.parse(xhr.responseText);
+                    var mensagemGeral = "";
+
+                    TratarCampoValidacao(data.Mensagens);
+                    $(window).scrollTop(0);
+
+                }
+                else
+                    TratarErro(xhr, ajaxOptions, thrownError);
+            },
+            true,
+            function (request) {
+                request.setRequestHeader("authorization", "Bearer " +  USUARIO_TOKEN);
+                request.setRequestHeader("External", "true");
+            });
+
+    }
+    
+</script>
+
+<div>
+    <!-- container -->
+    <div class="container">
+        <!-- row -->
+
+        <div class="row hidden" id="divConfirmacao">
+            <div class="col-md-offset-2 col-md-8">
+                <div class="billing-details" style="min-height:200px;">
+                    <p>
+
+                        <h3 class="title">Mensagem enviada com sucesso. Em breve entraremos em contato!</h3>
+                        <div class="form-group">
+                            <div>
+                                <br />
+                                <center><button class="primary-btn" onclick="window.location.href='/'" type="button">Voltar</button></center>
+                            </div>
+                        </div>
+
+                    </p>
+                    <p></p>
+
+                </div>
+            </div>
+        </div>
+
+        <div class="row" id="divCadastro">
+            <div class="col-md-6">
+                <div class="billing-details">
+                    <div class="section-title">
+                        <h3 class="title">Dados da mensagem</h3>
+                    </div>
+                    <div class="alert alert-danger hidden" role="alert" id="divMensagem">
+
+                    </div>
+                    <div class="form-group">
+                        <input class="input" type="text" name="Nome" id="Nome" placeholder="Nome">
+                    </div>
+                    <div class="form-group">
+                        <input class="input" type="text" name="Empresa" id="Empresa" placeholder="Empresa (*)">
+                    </div>
+                    <div class="form-group">
+                        <input class="input savoia-campo-telefone" type="text" name="Celular" id="Celular" placeholder="Celular">
+                    </div>
+                    <div class="form-group">
+                        <input class="input savoia-campo-telefone" type="text" name="" id="Telefone" placeholder="Telefone (*)">
+                    </div>
+                    <div class="form-group ">
+                        <input class="input" type="email" name="Email" id="Email" placeholder="Email">
+                    </div>
+                    <div class="form-group">
+                        <textarea class="form-control input" rows="5" name="Observacao" id="Observacao" placeholder="Mensagem"></textarea>
+                    </div>
+                    <div class="form-group">
+                        (*) campos obrigatórios
+                    </div>
+                    <div class="form-group">
+                        <div>
+                            <button class="primary-btn" id="btnSalvar" type="button">Enviar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+           
+                <div>
+                    <div class="section-title">
+                        <h4 class="title">Outros meios de contato</h4>
+                    </div>
+                    <p>
+                        <strong>Email:</strong> grupomacleod@gmail.com <br />
+                    </p>
+                    <p>
+                        <strong>Telefone Empresa:</strong> (16) 3919-0920 - De segunda à sexta (8:00 às 13:00 - 14:00 às 18:00)<br />
+                    </p>
+                    <p>
+                        <strong>Celular Empresa:</strong> (16) 98244-8979 - De segunda à sexta (8:00 às 13:00 - 14:00 às 18:00) <br />
+                    </p>
+                    <p>
+                       
+                    </p>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- /row -->
+
+    </div>
+</div>

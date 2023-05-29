@@ -1,0 +1,232 @@
+﻿@{
+    Layout = "_LayoutPesquisa";
+}
+
+@section breadCrumb {
+    <div id="breadcrumb">
+        <div class="container">
+            <ul class="breadcrumb">
+                <li><a href="/">Home</a></li>
+                <li>Pedido</li>
+                <li class="active" >Dados do Pedido</li>
+            </ul>
+        </div>
+    </div>
+}
+<script>
+
+    $(document).ready(function () {
+
+        if (USUARIO_TOKEN == null || USUARIO_TOKEN == '') 
+            window.location.href = '/cliente/login?carrinho';
+
+        Js.Util.TratarEnterForm("checkout-form", "btnSalvar");
+        ListarCarrinhoCliente();
+    });
+
+    ListarCarrinhoCliente = function () {
+
+        url = URL_SERVICO + 'pedidos/carrinho';
+        $("#tblPrincipal").append('<tbody />').children('tbody').remove();
+            var btnConcluirCarrinho = $("#btnConcluirCarrinho");
+
+        $(btnConcluirCarrinho).addClass("hidden");
+
+        ConsumirServico
+            ("GET",
+            url,
+            null,
+            function (response) { //OnSucess
+
+                if (response.Valido) {
+
+                    if (response.Dados != null && response.Dados != undefined) {
+                        //CarregarDadosCarrinho(response.Dados);   
+                        var carrinhoDetalhe = response.Dados;
+
+                        var tbody = $("#tblPrincipal").append('<tbody />').children('tbody');
+                                
+                        if (carrinhoDetalhe.Itens != undefined && carrinhoDetalhe.Itens != null) {
+
+                            $(btnConcluirCarrinho).removeClass("hidden");
+                            $.each(carrinhoDetalhe.Itens, function () {
+
+                                var urlProduto = "/produto/detalhe?idProduto=" + this.IdProduto;
+                                let imagemPrincipal = URL_SERVICO + "/" + this.CaminhoImagemPrincipal.toLowerCase().replace(".jpg", "_M.jpg");
+
+                                var objDesconto = "";
+                                var objDescontoTotal = "";
+
+
+                                let produto = `
+                                                    <tr>
+                                                    <td class="thumb"> <img src="${imagemPrincipal}" alt=""></td>
+                                                    <td class="details">
+                                                        <a href="${urlProduto}">${this.Titulo}</a>
+                                                    </td>
+                                                    <td class="price text-center"><strong>${Js.Util.FormatarValorBrasil(this.Valor, true)}</strong>${objDesconto}</td>
+                                                        <td class="qty text-center">`;
+
+                                    if (this.EstoqueDisponivel > 0){
+                                        
+                                        var qt = this.Qt;
+
+                                        //if(this.Qt>this.EstoqueDisponivel)
+                                        //    qt = this.EstoqueDisponivel;
+
+                                        produto += `<input class="input savoia-campo-numero" value="${qt}" id='txtQt' data-id-produto='${this.IdProduto}' onBlur="AtualizarQt('${this.IdProduto}',this.value, '${this.IdCliente}')"><BR><B>Estoque: </B>${this.EstoqueDisponivel}`;
+
+                                    }
+                                    else {
+                                        produto += `<label style=color:red> Indisponível</label>`;
+                                        $("#btnConcluirCarrinho").attr("disabled", "disabled");
+                                        $("#btnConcluirCarrinho").addClass("hidden");
+                                    }
+
+                                produto +=      `</td>
+                                                <td class="total text-center" > <strong class="primary-color" > ${ Js.Util.FormatarValorBrasil(this.ValorTotal, true) } </strong>${objDescontoTotal}</strong > </td>
+                                                    <td class="text-right"><button class="main-btn icon-btn" onClick="javascript: Excluir('${this.IdProduto}');return false;"><i class="fa fa-close"></i></button></td>
+                                                </tr>
+                                `
+                                $(tbody).append(produto);
+                                $(".savoia-campo-numero").mask('00000000', { reverse: true });
+                                Js.Util.TratarEnterControle("txtQt", "return false");
+                            });
+
+
+                        }
+                        else{
+                            $("#tblPrincipal").addClass("hidden");
+                            $("#tblPrincipalSemItens").removeClass("hidden");
+                        }
+
+                        $("#thTotal").html(Js.Util.FormatarValorBrasil(carrinhoDetalhe.ValorTotal, true));
+
+                        $("#thFrete").html(Js.Util.FormatarValorBrasil(carrinhoDetalhe.ValorTotalFrete, true));
+                        $("#thTotalComFrete").html(Js.Util.FormatarValorBrasil(carrinhoDetalhe.ValorTotalComFrete, true));
+
+                        if (carrinhoDetalhe.ValorTotalFrete <= 0)
+                            $("#thFrete").html("GRÁTIS");
+
+
+                    }
+                    else {
+                        $("#tblPrincipal").addClass("hidden");
+                        $("#tblPrincipalSemItens").removeClass("hidden");
+                    }
+                }
+               
+
+            },
+            function (xhr, ajaxOptions, thrownError) { //OnError
+
+                if (xhr.status == 400 || xhr.status == 500) {
+
+                    var mensagem = "";
+
+                    var data = JSON.parse(xhr.responseText);
+
+                    $.each(data.Mensagens, function () {
+
+                        if (this.Campo == null)
+                            mensagem += this.Mensagem + "\n";
+
+                    });
+
+                    if (mensagem != "")
+                        Js.Util.Janela.MostrarMensagemErro(mensagem);
+
+                }
+                else if (xhr.status == 401) {
+                            LimparStorage();
+                    RedirecionarLogin();
+                }
+                else
+                    Js.Util.Janela.MostrarMensagemErro(mensagem);
+            },
+            true,
+            function (request) {
+                request.setRequestHeader("authorization", "Bearer " +  USUARIO_TOKEN);
+                request.setRequestHeader("External", "true");
+                request.setRequestHeader("sessao", USUARIO_SESSAO);
+            });
+
+        return listaRetorno;
+    }
+
+    AtualizarQt = function (idProduto, qt, idCliente) {
+        
+        AtualizarCarrinho(idProduto, qt, true, idCliente);
+        ListarCarrinhoCliente();
+    }
+     
+    Excluir = function (idProduto) {
+        ExcluirCarrinho(idProduto, ListarCarrinhoCliente);
+        event.stopImmediatePropagation();
+    }
+
+</script>
+<div >
+    <!-- container -->
+    <div class="container">
+        <!-- row -->
+        <div class="row hidden" id="divConfirmacao">
+            <div class="col-md-12">
+                <div class="billing-details" style="min-height:200px;">
+                    <p>
+
+                        <center><h4 class="title" id="lblPedidoConfirmacao"></h4></center>
+                        <div class="form-group">
+                            <div>
+                                <br />
+                                <center><button class="primary-btn" onclick="window.location.href='/'" type="button">Voltar</button></center>
+                            </div>
+
+                        </div>
+
+                    </p>
+                    <p></p>
+
+                </div>
+            </div>
+        </div>
+
+        <div class="row" id="divPedido">
+            <form id="checkout-form" class="clearfix">
+                <div class="col-md-12">
+                    <div class="order-summary clearfix">
+                        <div class="section-title">
+                            <h3 class="title">Produtos Selecionados</h3>
+                        </div>
+                        <table class="shopping-cart-table table" id="tblPrincipal">
+                            <thead>
+                                <tr>
+                                    <th>Produto</th>
+                                    <th></th>
+                                    <th class="text-center">Preço</th>
+                                    <th class="text-center">Quantidade</th>
+                                    <th class="text-center">Total</th>
+                                    <th class="text-right"></th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                         <table class="shopping-cart-table table hidden" id="tblPrincipalSemItens">
+                                <tr>
+                            <td><center>Não existem itens no seu carrinho</center></td>
+                                 
+                            </tr>
+                        </table>
+                        <div class="pull-right">
+                                <button class="main-btn" onclick="javascript: window.location.href = '/'; return false;"><i class="fa fa-long-arrow-left"></i> Continuar Comprando</button>&nbsp;&nbsp;
+                                <button class="primary-btn hidden" id="btnConcluirCarrinho" onclick="javascript: window.location.href = '/pedido/pagamento'; return false;">Concluir Compra <i class="fa fa-arrow-circle-right"></i></button>
+                        </div>
+                    </div>
+
+                </div>
+            </form>
+        </div>
+        <!-- /row -->
+    </div>
+    <!-- /container -->
+</div>

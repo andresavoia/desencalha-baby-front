@@ -1,0 +1,399 @@
+﻿@{
+    Layout = "_LayoutPesquisa";
+}
+
+@section breadCrumb {
+    <div id="breadcrumb">
+        <div class="container">
+            <ul class="breadcrumb">
+                <li><a href="/">Home</a></li>
+                <li>Pedido</li>
+                <li class="active" >Pagamento</li>
+            </ul>
+        </div>
+    </div>
+}
+<script>
+
+    $(document).ready(function () {
+
+        Js.Util.TratarEnterForm("checkout-form", "btnSalvar");
+
+        //Se o cabra não tiver logado, vamos forçar ele logar
+        if (USUARIO_TOKEN == null || USUARIO_TOKEN == '') {
+            window.location.href = '/cliente/login?pagamento';
+
+        }
+        else
+        {
+            //Combo Estado - Entrega
+            $("#EnderecoEntrega_Estado_CodEstado").change(function (e) {
+                var id = $(this).val();
+
+                $('#EnderecoEntrega_Estado_Cidade_CodCidade').val("");
+                $('#EnderecoEntrega_Estado_Cidade_DescCidade').val("");
+
+                CarregarCidade(URL_SISTEMA_COMERCIAL, id, 'EnderecoEntrega_Estado_Cidade_CodCidade', 'EnderecoEntrega_Estado_Cidade_DescCidade');
+            });
+
+            CarregarEstado(URL_SISTEMA_COMERCIAL, $("#EnderecoEntrega_Estado_CodEstado"));
+            CarregarDadosCliente();
+        }
+    });
+
+
+    CarregarDadosCliente = function () {
+
+        var url = URL_SERVICO + "clientes/id";
+        Js.Util.Get(url,
+            null,
+            function (response) { //OnSucess
+
+                if (response != null && response.Valido) {
+                  
+                    //EnderecoEntrega
+                    $("#EnderecoEntrega_Endereco").val(response.Dados.EnderecoEntrega.Endereco);
+                    $("#EnderecoEntrega_Complemento").val(response.Dados.EnderecoEntrega.Complemento);
+                    $("#EnderecoEntrega_Cep").val(response.Dados.EnderecoEntrega.Cep);
+                    $("#EnderecoEntrega_Bairro").val(response.Dados.EnderecoEntrega.Bairro);
+                    $("#EnderecoEntrega_Estado_Cidade_CodCidade").val(response.Dados.EnderecoEntrega.Cidade.CodCidade);
+                    $("#EnderecoEntrega_Estado_Cidade_DescCidade").val(response.Dados.EnderecoEntrega.Cidade.Titulo);
+                    $("#EnderecoEntrega_Estado_CodEstado").val(response.Dados.EnderecoEntrega.Cidade.Estado.CodEstado)  
+
+                    //depois que carregar os dados, vamos chamar o manter carrinho por conta do estado
+                    ListarCarrinhoCliente();
+                    $("#divPedido").removeClass("hidden");
+
+                }
+            },
+            function (xhr, ajaxOptions, thrownError) { //OnError
+                TratarErro(xhr, ajaxOptions, thrownError);
+            },
+            true,
+            function (request) {
+                request.setRequestHeader("authorization", "Bearer " +  USUARIO_TOKEN);
+                request.setRequestHeader("External", "true");
+            });
+
+    }
+
+    LimparCarrinho = function () {
+        $("#tblPrincipal tbody").empty();
+        $("#thTotal").html(Js.Util.FormatarValorBrasil(0, true));
+        $("#thFrete").html(Js.Util.FormatarValorBrasil(0, true));
+        $("#thTotalComFrete").html(Js.Util.FormatarValorBrasil(0, true));
+
+    }
+
+    ListarCarrinhoCliente = function () {
+
+        url = URL_SERVICO + 'pedidos/carrinho';
+        LimparCarrinho();
+
+        ConsumirServico
+            ("GET",
+            url,
+            null,
+            function (response) { //OnSucess
+
+                if (response.Valido) {
+
+                    if (response.Dados != null && response.Dados != undefined) {
+                        //CarregarDadosCarrinho(response.Dados);   
+                        var carrinhoDetalhe = response.Dados;
+
+                        if (carrinhoDetalhe.Itens != undefined && carrinhoDetalhe.Itens != null) {
+                            
+                            
+                        $("#btnSalvar").removeClass("hidden");
+
+                            $.each(carrinhoDetalhe.Itens, function () {
+
+                                var urlProduto = "/produto/detalhe?idProduto=" + this.IdProduto;
+                                let imagemPrincipal = URL_SERVICO + "/" + this.CaminhoImagemPrincipal.toLowerCase().replace(".jpg", "_M.jpg");
+
+                                var objDesconto = "";
+                                var objDescontoTotal = "";
+
+
+                                    let produto = `
+                                                        <tr>
+                                                        <td class="thumb"> <img src="${imagemPrincipal}" alt=""></td>
+                                                        <td class="details">
+                                                            <a href="${urlProduto}">${this.Titulo}</a>
+                                                        </td>
+                                                        <td class="price text-center"><strong>${Js.Util.FormatarValorBrasil(this.Valor, true)}</strong>${objDesconto}</td>
+                                                            <td class="qty text-center">`;
+
+                                    if (this.EstoqueDisponivel > 0)
+                                        produto += `<input class="input savoia-campo-numero" value="${this.Qt}" id='txtQt' data-id-produto='${this.IdProduto}' onBlur="AtualizarQt('${this.IdProduto}',this.value, '${this.IdCliente}')"><BR><B>Estoque: </B>${this.EstoqueDisponivel}`;
+                                    else{
+                                        produto += `<label style=color:red> Indisponível</label>`;
+                                        $("#btnSalvar").attr("disabled","disabled");
+                                        $("#btnSalvar").addClass("hidden");
+                                    }
+
+                                    produto += `</td>
+                                                    <td class="total text-center" > <strong class="primary-color" > ${Js.Util.FormatarValorBrasil(this.ValorTotal, true)} </strong>${objDescontoTotal}</strong > </td>
+                                                        <td class="text-right"><button class="main-btn icon-btn" onClick="javascript: Excluir('${this.IdProduto}');return false;"><i class="fa fa-close"></i></button></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td colspan="6">Previsão de entrega: <strong>${this.DiasPrazoEntrega} dias úteis</strong></td>
+                                                    </tr>
+                                    `
+                                $("#tblPrincipal tbody").append(produto);
+                                $(".savoia-campo-numero").mask('00000000', { reverse: true });
+                                Js.Util.TratarEnterControle("txtQt", "return false");
+                            });
+
+
+                        }
+
+                        $("#thTotal").html(Js.Util.FormatarValorBrasil(carrinhoDetalhe.ValorTotal, true));
+
+                        $("#thFrete").html(Js.Util.FormatarValorBrasil(carrinhoDetalhe.ValorTotalFrete, true));
+                        $("#thTotalComFrete").html(Js.Util.FormatarValorBrasil(carrinhoDetalhe.ValorTotalComFrete, true));
+
+                        if (carrinhoDetalhe.ValorTotalFrete <= 0)
+                            $("#thFrete").html("GRÁTIS");
+
+
+
+                    }
+                    else {
+                        $("#tblPrincipal").addClass("hidden");
+                        $("#tblPrincipalSemItens").removeClass("hidden");
+                    }
+                }
+            },
+            function (xhr, ajaxOptions, thrownError) { //OnError
+
+                if (xhr.status == 400 || xhr.status == 500) {
+
+                    var mensagem = "";
+
+                    var data = JSON.parse(xhr.responseText);
+
+                    $.each(data.Mensagens, function () {
+
+                        if (this.Campo == null)
+                            mensagem += this.Mensagem + "\n";
+
+                    });
+
+                    if (mensagem != "")
+                        Js.Util.Janela.MostrarMensagemErro(mensagem);
+
+                }
+                else if (xhr.status == 401) {
+                            LimparStorage();
+                    RedirecionarLogin();
+                }
+                else
+                    Js.Util.Janela.MostrarMensagemErro(mensagem);
+            },
+            true,
+            function (request) {
+                request.setRequestHeader("authorization", "Bearer " +  USUARIO_TOKEN);
+                request.setRequestHeader("External", "true");
+            });
+
+        return listaRetorno;
+    }
+
+    AtualizarQt = function (idProduto, qt, idCliente) {
+
+        AtualizarCarrinho(idProduto, qt, true, idCliente);
+        ListarCarrinhoCliente();
+    }
+     
+    Excluir = function (idProduto) {
+        ExcluirCarrinho(idProduto, ListarCarrinhoCliente);
+        
+        event.stopImmediatePropagation();
+    }
+
+    Salvar = function () {
+
+        LimparCampoValidacaoForm();
+
+        ConsumirServico
+            ("POST",
+            URL_SERVICO + "pedidos",
+            {
+                "EnderecoEntrega": {
+                    "Cidade": {
+                        "CodCidade": ($("#EnderecoEntrega_Estado_Cidade_CodCidade").val() == "" ? 0 : $("#EnderecoEntrega_Estado_Cidade_CodCidade").val()),
+                        "Estado": {
+                            "CodEstado": ($("#EnderecoEntrega_Estado_CodEstado").val() == "" ? 0 : $("#EnderecoEntrega_Estado_CodEstado").val()),
+                            "UF": $("#EnderecoEntrega_Estado_CodEstado option:selected").text()
+                        },
+                        "Titulo": $("#EnderecoEntrega_Estado_Cidade_DescCidade").val()
+                    },
+                    "Bairro": $("#EnderecoEntrega_Bairro").val(),
+                    "Endereco": $("#EnderecoEntrega_Endereco").val(),
+                    "Complemento": $("#EnderecoEntrega_Complemento").val(),
+                    "Cep": $("#EnderecoEntrega_Cep").val()
+                }
+            }
+            ,
+            function (response) { //OnSucess
+
+                if (response != null && response.Valido) {
+
+                    $("#divPedido").addClass('hidden');
+                    $("#divConfirmacao").removeClass('hidden');
+                    $("#lblPedidoConfirmacao").html("Pedido Nº " + response.Dados.Id + " realizado com sucesso. Em breve entraremos em contato!<BR><BR>Obrigado por escolher o Desencalha Estoque :-)");
+
+                    CarregarDadosCarrinhoTopo();
+
+                }
+
+            },
+            function (xhr, ajaxOptions, thrownError) { //OnError
+
+                var existeValidacaoCampo = false;
+
+                if (xhr.status == 400 || xhr.status == 500) {
+
+                    var data = JSON.parse(xhr.responseText);
+                    var mensagemGeral = "";
+
+                    TratarCampoValidacao(data.Mensagens);
+                    $(window).scrollTop(0);
+
+                }
+                else
+                    TratarErro(xhr, ajaxOptions, thrownError);
+            },
+            true,
+            function (request) {
+                request.setRequestHeader("authorization", "Bearer " +  USUARIO_TOKEN);
+                request.setRequestHeader("External", "true");
+            });
+    }
+
+</script>
+<div >
+    <!-- container -->
+    <div class="container">
+        <!-- row -->
+        <div class="row hidden" id="divConfirmacao">
+            <div class="col-md-12">
+                <div class="billing-details" style="min-height:200px;">
+                    <p>
+
+                        <center><h4 class="title" id="lblPedidoConfirmacao"></h4></center>
+                        <div class="form-group">
+                            <div>
+                                <br />
+                                <center><button class="primary-btn" onclick="window.location.href='/'" type="button">Voltar</button></center>
+                            </div>
+
+                        </div>
+
+                    </p>
+                    <p></p>
+
+                </div>
+            </div>
+        </div>
+
+            <div class="row hidden" id="divPedido">
+            <form id="checkout-form" class="clearfix">
+                <div class="col-md-6">
+                    <div class="billing-details">
+                        <div class="section-title">
+                            <h3 class="title">Endereço de entrega</h3>
+                        </div>
+                        <div class="alert alert-danger hidden" role="alert" id="divMensagem">
+
+                        </div>
+                        <div class="form-group">
+                            <input class="input" type="text" name="EnderecoEntrega_Endereco" id="EnderecoEntrega_Endereco" placeholder="Endereço">
+                        </div>
+                        <div class="form-group">
+                            <input class="input" type="text" name="EnderecoEntrega_Complemento" id="EnderecoEntrega_Complemento" placeholder="Complemento">
+                        </div>
+                        <div class="form-group">
+                            <input class="input" type="text" name="EnderecoEntrega_Bairro" id="EnderecoEntrega_Bairro" placeholder="Bairro">
+                        </div>
+                        <div class="form-group">
+                            <input class="input savoia-campo-cep" type="text" name="EnderecoEntrega_Cep" id="EnderecoEntrega_Cep" placeholder="Cep">
+                        </div>
+
+                        <div class="form-inline">
+                            <select style="width:30%" class="form-control input" name="EnderecoEntrega_Estado_CodEstado" id="EnderecoEntrega_Estado_CodEstado" placeholder="Estado"></select>
+                            <input style="width:69%" class="form-control input" type="text" name="EnderecoEntrega_Estado_Cidade_DescCidade" id="EnderecoEntrega_Estado_Cidade_DescCidade" autocomplete="off" placeholder="Digite o nome da Cidade">
+                            <input id="EnderecoEntrega_Estado_Cidade_CodCidade" name="EnderecoEntrega_Estado_Cidade_CodCidade" type="hidden" />
+                        </div>
+
+                        </p>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="shiping-methods">
+                        <div class="section-title">
+                            <h4 class="title">Dados de Pagamento</h4>
+
+                        </div>
+                        <p>Como trabalhamos com empresas diferenciadas, e somente com pré cadastro aprovado. O pagamento é realizado através de boleto bancário, que é enviado após a análise do pedido.</p>
+                        <p>Depois de algumas horas após o envio do pedido, enviaremos o boleto para pagamento.</p>
+                    </div>
+
+                </div>
+                <div class="col-md-12">
+                    <div class="order-summary clearfix">
+                        <div class="section-title">
+                            <h3 class="title">Dados do pedido</h3>
+                        </div>
+                        <table class="shopping-cart-table table" id="tblPrincipal">
+                            <thead>
+                                <tr>
+                                    <th>Produto</th>
+                                    <th></th>
+                                    <th class="text-center">Preço</th>
+                                    <th class="text-center">Quantidade</th>
+                                    <th class="text-center">Total</th>
+                                    <th class="text-right"></th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                            <tfoot>
+                                <tr>
+                                    <th class="empty" colspan="3"></th>
+                                    <th>TOTAL</th>
+                                    <th colspan="2" class="sub-total" id="thTotal">R$ 0,00</th>
+                                </tr>
+                                <tr>
+                                    <th class="empty" colspan="3"></th>
+                                    <th>FRETE</th>
+                                    <td colspan="2" id="thFrete">R$ 0,00</td>
+                                </tr>
+                                <tr>
+                                    <th class="empty" colspan="3"></th>
+                                    <th>TOTAL COM FRETE</th>
+                                    <th colspan="2" class="total" id="thTotalComFrete">R$ 0,00</th>
+                                </tr>
+                            </tfoot>
+                        </table>
+
+                        <table class="shopping-cart-table table hidden" id="tblPrincipalSemItens">
+                            <tr>
+                                <td><center>Não existem itens no seu carrinho</center></td>
+                            </tr>
+                        </table>
+                        <div class="pull-right">
+                                <button class="main-btn" onclick="javascript: window.location.href = '/'; return false;"><i class="fa fa-long-arrow-left"></i> Continuar Comprando</button>&nbsp;&nbsp;
+                            <button class="primary-btn hidden" id="btnSalvar" onclick="javascript: Salvar(); return false;">Confirmar Compra </button>
+                        </div>
+                    </div>
+
+                </div>
+            </form>
+        </div>
+        <!-- /row -->
+    </div>
+    <!-- /container -->
+</div>

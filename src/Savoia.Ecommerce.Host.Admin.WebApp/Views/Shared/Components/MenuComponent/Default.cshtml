@@ -1,0 +1,163 @@
+﻿@using Savoia.Ecommerce.Host.Admin.WebApp.Controllers
+@using Savoia.Ecommerce.Host.Admin.WebApp.Util;
+
+<style>
+    .dropdown-submenu {
+        position: relative;
+    }
+   .dropdown-submenu > .dropdown-menu {
+            top: 0;
+            left: 100%;
+            margin-top: -6px;
+            margin-left: -1px;
+            -webkit-border-radius: 0 6px 6px 6px;
+            -moz-border-radius: 0 6px 6px;
+            border-radius: 0 6px 6px 6px;
+   }
+
+    .dropdown-submenu:hover > .dropdown-menu {
+        display: block;
+    }
+
+    .dropdown-submenu > a:after {
+        display: block;
+        content: " ";
+        float: right;
+        width: 0;
+        height: 0;
+        border-color: transparent;
+        border-style: solid;
+        border-width: 5px 0 5px 5px;
+        border-left-color: #ccc;
+        margin-top: 5px;
+        margin-right: -10px;
+    }
+
+    .dropdown-submenu:hover > a:after {
+        border-left-color: #fff;
+    }
+
+    .dropdown-submenu.pull-left {
+        float: none;
+    }
+
+    .dropdown-submenu.pull-left > .dropdown-menu {
+        left: -100%;
+        margin-left: 10px;
+        -webkit-border-radius: 6px 0 6px 6px;
+        -moz-border-radius: 6px 0 6px 6px;
+        border-radius: 6px 0 6px 6px;
+    }
+
+</style>
+<script>
+    $(document).ready(function () {
+
+        $("#lblUsuario").text(USUARIO_NOME);
+         
+        if ((USUARIO_TIPO == ConstantesEcommerce.CodUsuarioTipoAdmin || USUARIO_TIPO == ConstantesEcommerce.CodUsuarioTipoCliente) &&
+            window.location.href.indexOf('/usuarios/login') == -1) { 
+
+            $("#navAdmin").css("visibility","visible");
+        }
+
+        $("#btnAlterarSenha").click(function () {
+
+            AbrirUsuarioSenha();
+
+        });
+
+        $("#btnDeslogar").click(function () {
+
+            localStorage.clear();
+            RedirecionarLogin();
+
+        });
+
+        if (USUARIO_TIPO == ConstantesEcommerce.CodUsuarioTipoCliente)
+            $(".admMenuItem").hide();
+        else 
+            $(".admMenuItem").show();
+
+
+    });
+
+    
+    AbrirUsuarioSenha = function () {
+
+        var url = '@Url.Action(nameof(SistemaController.UsuarioAlterarSenha), "Sistema", new { nivelPopup = 0}, Context.Request.Scheme)'
+
+        Js.Util.Janela.AbrirJanela(
+                     url,
+                     '@ConstantesWeb.TITULO_POPUP_USUARIO_SENHA_ALTERAR',
+                     {
+                         tamanho: 'Medio',
+                         altura: '@ConstantesWeb.ALTURA_POPUP_USUARIO_SENHA_ALTERAR'
+                     });
+
+    }
+
+</script>
+
+<nav class="navbar-inverse navbar-fixed-top hidden-print" style="height:72px">
+    <div class="container" style="display:" >
+        <div class="navbar-header pull-left">
+            <span class="navbar-brand">
+              <img src="~/images/img-logotipo-comercial.png" class="img-responsive" />
+                
+            </span>
+        </div>
+        <div class="navbar-header pull-right " style="margin-top:10px; margin-left:10px"> 
+           <span class="savoia-texto-branco" > 
+          
+            </span>
+        </div>
+    </div><!-- /.container-fluid -->
+</nav>
+
+<nav class="navbar navbar-default navbar-fixed-top hidden-print"  style="margin-top: 72px; visibility:hidden" id="navAdmin">
+    <div class="container">
+        <!-- Brand and toggle get grouped for better mobile display -->
+
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
+            <span class="sr-only">Menu</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+        </button>
+    </div>     
+    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+        <ul class="nav navbar-nav">
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Cadastros<span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                        <li class="admMenuItem"><a href='@Url.Action(nameof(SistemaController.CategoriaPesquisar), "Sistema", null, Context.Request.Scheme)'>Categoria</a></li>
+                        <li><a href='@Url.Action(nameof(SistemaController.ProdutoPesquisar), "Sistema", null, Context.Request.Scheme)'>Produto</a></li>
+                        <li class="admMenuItem"><a href='@Url.Action(nameof(SistemaController.ClientePesquisar), "Sistema", null, Context.Request.Scheme)'>Cliente</a></li>
+                    </ul>
+                </li>
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Controle<span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                        <li><a href='@Url.Action(nameof(SistemaController.PedidoPesquisar), "Sistema", null, Context.Request.Scheme)'>Pedido</a></li>
+                        <li role="separator" class="divider"></li>
+                        <li><a href='@Url.Action(nameof(SistemaController.FretePesquisar), "Sistema", null, Context.Request.Scheme)'>Frete por Estado</a></li>
+                    </ul>
+                </li>
+          
+        </ul>
+        <ul class="nav navbar-nav navbar-right">
+            <li class="dropdown">
+                <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false" ><label id="lblUsuario"></label>&nbsp;<span class="glyphicon glyphicon-user"></span></a>
+                <ul class="dropdown-menu">
+                    <li><a  id="btnAlterarSenha"  style="cursor:pointer">Alterar senha</a></li>
+                    <li role="separator" class="divider"></li>
+                    <li><a id="btnDeslogar" style="cursor:pointer">Deslogar</a></li>
+                </ul>
+            </li>
+        </ul>
+    </div><!-- /.navbar-collapse -->
+
+    </div><!-- /.container-fluid -->
+</nav>

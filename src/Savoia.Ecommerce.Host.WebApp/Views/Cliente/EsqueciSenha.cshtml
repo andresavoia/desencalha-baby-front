@@ -1,0 +1,119 @@
+﻿@{
+    Layout = "_LayoutPesquisa";
+}
+
+@section breadCrumb {
+    <div id="breadcrumb">
+        <div class="container">
+            <ul class="breadcrumb">
+                <li><a href="/">Home</a></li>
+                <li>Cliente</li>
+                <li class="active">Esqueci minha senha</li>
+            </ul>
+        </div>
+    </div>
+}
+
+<script>
+
+    $(document).ready(function () {
+
+        Js.Util.TratarEnterForm("checkout-form", "btnEnviar");
+
+        $("#btnEnviar").click(
+            function () { Autenticar() }
+        );
+    });
+
+    Autenticar = function () {
+
+        LimparCampoValidacaoForm();
+        url = URL_SERVICO + 'clientes/esqueci-minha-senha';
+
+        Js.Util.Post(url,
+            {
+                "Email": $("#Email").val()
+            },
+            function (response) { //OnSucess
+
+                if (response.Valido) {
+                        $("#divCadastro").addClass('hidden');
+                        $("#divConfirmacao").removeClass('hidden');
+                }
+            },
+            function (xhr, ajaxOptions, thrownError) { //OnError
+
+                var existeValidacaoCampo = false;
+
+                if (xhr.status == 400 || xhr.status == 500) {
+
+                    var data = JSON.parse(xhr.responseText);
+                    var mensagemGeral = "";
+
+                    TratarCampoValidacao(data.Mensagens);
+
+                }
+                else
+                    TratarErro(xhr, ajaxOptions, thrownError);
+            },
+            true,
+            function (request) {
+            });
+
+    }
+
+</script>
+<!-- section -->
+<div class="section">
+    <!-- container -->
+    <div class="container">
+        <!-- row -->
+        <div class="row hidden" id="divConfirmacao">
+            <div class="col-md-12">
+                <div class="billing-details" style="min-height:200px;">
+                    <p>
+
+                        <Center><h4 class="title">Email enviado com sucesso. Caso não o receba em 10min, verifique sua caixa de SPAM.</h4></Center>
+                        <div class="form-group">
+                            <div>
+                                <br />
+                                <center><button class="primary-btn" onclick="window.location.href='/'" type="button">Voltar</button></center>
+                            </div>
+                        </div>
+
+                    </p>
+                    <p></p>
+
+                </div>
+            </div>
+        </div>
+
+        <div class="row" id="divCadastro">
+            <form id="checkout-form" class="clearfix">
+
+                <div class="col-md-offset-3 col-md-6">
+                    <div class="billing-details">
+                        <p>Caso não lembre o seu login(email), entre em contato através da opção fale conosco</p>
+                        <div class="section-title">
+                            <h3 class="title">Esqueceu sua senha?</h3>
+                        </div>
+                        <div class="alert alert-danger hidden" role="alert" id="divMensagem">
+
+                        </div>
+                        <div class="form-group">
+                            <input class="input" type="email" id="Email" name="Email" placeholder="Digite seu login (email)">
+                        </div>
+                        <div class="form-group">
+                            <div>
+                                <button class="primary-btn" id="btnEnviar" type="button">Enviar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <!-- /row -->
+    </div>
+    <!-- /container -->
+</div>
+<!-- /section -->

@@ -1,0 +1,71 @@
+﻿@using Savoia.Ecommerce.Host.Admin.WebApp.Components;
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+<script>
+
+    $(document).ready(function () {
+       
+        if (window.location.href.indexOf('/usuarios/login') == -1) {
+           
+            ValidarSessaoUsuario();
+
+        }
+            
+    });
+
+</script>
+@section menuTopo{
+    @await Component.InvokeAsync(nameof(Savoia.Ecommerce.Host.Admin.WebApp.Components.MenuComponent))
+}
+@section Scripts 
+{
+    <!--INICIO SCRIPTS da _LayoutPrincipal -->
+    <!--FIM SCRIPTS da _LayoutPrincipal -->
+
+@RenderSection("Scripts", required: false)  
+}
+
+<style>
+/*mostra sem a barra de scroll vertical*/
+html {
+    overflow-y:scroll;
+}
+.navbar-nav > li > a, .navbar-brand {
+    padding-top:4px !important; 
+    padding-bottom:0 !important;
+    height: 32px;
+}
+.navbar {min-height:30px !important;}
+
+#footer{
+    padding-top:0px !important; 
+    padding-bottom:0 !important;
+    height: 22px;
+    min-height:22px !important;
+    color: #d2d3d3;
+}
+</style>
+<div style="height:130px"></div>
+<div class="container body-content">
+    
+    @RenderBody()
+ 
+    <nav class="navbar navbar-fixed-bottom" id="footer"  >
+        
+    @if ((string.Format("{0}://{1}{2}{3}", Context.Request.Scheme, Context.Request.Host, Context.Request.Path, Context.Request.QueryString)).IndexOf("loteamento.") >= 0)
+    {
+        <content>
+            &nbsp; Todos os direitos reservados - 1.0.0
+        </content>
+    }
+    else
+    {
+        <content>
+            <center>&nbsp; Todos os direitos reservados - Savoia Informática - 4.8.0</center>
+        </content>
+    }
+   
+    </nav>
+
+</div>

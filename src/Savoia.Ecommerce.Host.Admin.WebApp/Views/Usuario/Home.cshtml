@@ -1,0 +1,51 @@
+@{
+    ViewBag.Title = "Login";
+    Layout = "~/Views/Shared/_LayoutPrincipal.cshtml";
+}
+@section Scripts{
+<script>
+
+    $(document).ready(function () {
+
+        $("#txtUsuario").text(USUARIO_NOME);
+
+        SetarHeightElementos();
+
+    });
+
+     SetarHeightElementos = function () {
+            var height = $(window).height();
+            //$('#divClienteSemPedido').css('height', height - 300).css("overflow", "auto");
+            //$("#divAniversariante").css('height', height - 300).css("overflow", "auto");
+    };
+
+</script>
+}
+
+<form class="form-horizontal" role="form" method="post" id="frmPrincipal">
+    
+    <fieldset>
+
+        <div class="row savoia-row-top">
+            <div class="col-lg-5">
+                <div class="row">
+                    <div class="col-lg-12 text-left">
+                        <label class="text-primary">Selecione a opção desejada no menu acima</label>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-5">
+                <div class="alert alert-dismissible alert-success col-lg-10 hidden">
+                    <button type="button" class="close" data-dismiss="alert">&times;</button>
+                    <strong>Atenção!</strong> Lembre-se de trocar a sua senha de acesso.
+                </div>
+            </div>
+            <div class="col-lg-1">
+
+                <img id="imgLogotipo"  src="/images/img-logotipo-icone-sistema.png"/>
+
+            </div>
+        </div>
+   
+    </fieldset>
+</form>

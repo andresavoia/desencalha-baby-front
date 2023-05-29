@@ -1,0 +1,14 @@
+﻿@{ 
+
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@section Scripts
+{
+    <!--INICIO SCRIPTS da _LayoutPoup-->
+    <!--FIM SCRIPTS da _LayoutPoup-->
+    @RenderSection("Scripts", required: false)
+}
+<div id="main" class="container-fluid body-content"  >
+    @RenderBody()
+</div>
+

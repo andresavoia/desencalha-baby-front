@@ -1,0 +1,137 @@
+﻿@{
+    Layout = "_LayoutPesquisa";
+}
+
+@section breadCrumb {
+    <div id="breadcrumb">
+        <div class="container">
+            <ul class="breadcrumb">
+                <li><a href="/">Home</a></li>
+                <li>Cliente</li>
+                <li class="active">Novo Cliente</li>
+            </ul>
+        </div>
+    </div>
+}
+<script>
+
+    $(document).ready(function () {
+
+        Js.Util.TratarEnterForm("checkout-form", "btnSalvar");
+        var tokenAlteracao = Js.Util.QueryString("token");
+
+        if ($.trim(tokenAlteracao) == "" && $.trim(USUARIO_TOKEN) == "")
+            RedirecionarLogin(true);
+
+        $("#btnSalvar").click(
+            function () { Salvar(tokenAlteracao) }
+        );
+
+    });
+
+    Salvar = function (tokenAlteracao) {
+
+        LimparCampoValidacaoForm();
+
+        ConsumirServico
+            ("PATCH",
+            URL_SERVICO + "clientes/senhas",
+            {
+                "Senha": $("#Senha").val(),
+                "SenhaConfirmacao": $("#SenhaConfirmacao").val(),
+                "Token" : tokenAlteracao
+            }
+            ,
+            function (response) { //OnSucess
+
+                if (response != null && response.Valido) {
+
+                    $("#divCadastro").addClass('hidden');
+                    $("#divConfirmacao").removeClass('hidden');
+                }
+
+
+            },
+            function (xhr, ajaxOptions, thrownError) { //OnError
+
+                var existeValidacaoCampo = false;
+
+                if (xhr.status == 400 || xhr.status == 500) {
+
+                    var data = JSON.parse(xhr.responseText);
+                    var mensagemGeral = "";
+
+                    TratarCampoValidacao(data.Mensagens);
+                    $(window).scrollTop(0);
+
+                }
+                else
+                    TratarErro(xhr, ajaxOptions, thrownError);
+            },
+            true,
+            function (request) {
+                request.setRequestHeader("authorization", "Bearer " +  USUARIO_TOKEN);
+                request.setRequestHeader("External", "true");
+            });
+
+    }
+
+</script>
+
+<div>
+    <form autocomplete="off" id="frm">
+        <!-- container -->
+        <div class="container">
+            <!-- row -->
+
+            <div class="row hidden" id="divConfirmacao">
+
+                <div class="col-md-12">
+                    <div class="billing-details" style="min-height:200px;">
+                        <p>
+
+                            <center><h3 class="title">Senha alterada com sucesso</h3></center>
+    <div class="form-group">
+        <div>
+            <br />
+            <center><button class="primary-btn" onclick="window.location.href='/'" type="button">Voltar</button></center>
+        </div>
+    </div>
+
+</p>
+                        <p></p>
+
+                    </div>
+                </div>
+            </div>
+
+            <div class="row" id="divCadastro">
+
+                <div class="col-md-offset-3 col-md-6">
+                    <div class="billing-details">
+                        <div class="section-title">
+                            <h3 class="title">Alteração de senha</h3>
+                        </div>
+                        <div class="alert alert-danger hidden" role="alert" id="divMensagem">
+                        </div>
+                        <div class="form-group">
+                            <input class="input" type="password" name="Senha" id="Senha" placeholder="Nova Senha ">
+                        </div>
+                        <div class="form-group">
+                            <input class="input" type="password" name="SenhaConfirmacao" id="SenhaConfirmacao" placeholder="Confirmação de senha">
+                        </div>
+                        <div class="form-group">
+                            <div>
+                                <button class="primary-btn" id="btnSalvar" type="button">Salvar</button>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- /row -->
+
+        </div>
+    </form>
+</div>

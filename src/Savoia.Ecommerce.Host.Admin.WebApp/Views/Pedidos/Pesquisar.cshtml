@@ -1,0 +1,265 @@
+﻿@using Savoia.Ecommerce.Host.Admin.WebApp.Controllers
+@using Savoia.Ecommerce.Host.Admin.WebApp.Util
+@{
+    Layout = "~/Views/Shared/_LayoutPrincipal.cshtml";
+}
+@section Scripts{
+
+    <script>
+        var urlApiEcommerce = '@ViewData["apiEcommerce"]'
+        var pesquisou = false;
+
+        $(document).ready(function () {
+
+            Js.Util.TratarEnterForm("frmPrincipal", "btnPesquisar");
+
+            CarregarPedidoStatus(urlApiEcommerce, $("#CodPedidoStatus"));
+            TratarUsuarioPerfil();
+
+            //Botão Pesquisar
+            $("#btnPesquisar").click(function () {
+
+                if (USUARIO_TIPO == ConstantesEcommerce.CodUsuarioTipoAdmin) {
+                    if($("#IdVendedor").val() == ""){
+                        Js.Util.Janela.MostrarMensagem("Selecione um Vendedor");
+                        return;
+                    }
+                }
+                
+                var validacaoForm = true;
+
+                validacaoForm = Js.Util.ValidarForm($("#frmPrincipal"));
+
+                if (validacaoForm) {
+                    pesquisou = true;
+                    Pesquisar();
+                }
+            });
+
+
+        }); //Fim ready
+
+        // ++++++++++++++++++++++++++++++++++++++ INICIO DAS FUNCOES ++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        AbrirCadastro = function (acao, chaveGrid) {
+
+            var url;
+            url = '@Url.Action(nameof(SistemaController.PedidoCadastrar), "Sistema", new { acao = FuncoesComum.CodificarUrl(ConstantesComum.Acao.Alterar.ToString()), nivelPopup = 0, funcaoPosGravacao = "function () { parent.Pesquisar(); } "},Context.Request.Scheme)';
+            url += "&id=" + chaveGrid;
+
+            if (USUARIO_TIPO == ConstantesEcommerce.CodUsuarioTipoAdmin) {
+                url += "&idVendedor=" + $("#IdVendedor").val();
+            }
+
+            Js.Util.Janela.AbrirJanela(
+                         url,
+                         'Cadastro de Pedido',
+                         {
+                             tamanho: 'MuitoGrande',
+                             altura: $(window).height() - ALTURA_PADRAO_DIMUICAO,
+                             alturaMaxima: 1000
+                         });
+        }
+
+        TratarUsuarioPerfil = function () {
+
+            if (USUARIO_TIPO == ConstantesEcommerce.CodUsuarioTipoAdmin) {
+                $("#divCliente").removeClass("hidden")
+                CarregarCliente(urlApiEcommerce, $("#IdVendedor"));
+            }
+            else if (USUARIO_TIPO == ConstantesEcommerce.CodUsuarioTipoCliente) {
+                $("#divCliente").addClass("hidden")
+            }
+
+        }
+
+        Pesquisar = function () {
+
+            if (!pesquisou)
+                return;
+
+            var idVendedor = "";
+
+            if (USUARIO_TIPO == ConstantesEcommerce.CodUsuarioTipoAdmin)
+                idVendedor = $("#IdVendedor").val();
+
+            var dataInicial = ($("#DataInicial").val() != "" ? $("#DataInicial").val() : "");
+            var dataFinal = ($("#DataFinal").val() != "" ? $("#DataFinal").val() : "");
+
+            if (dataInicial)
+                dataInicial = Js.Util.FormatarData(Js.Util.RetornarDataJs(dataInicial, "00:00"), 'isoDateTime');
+
+            if (dataFinal)
+                dataFinal = Js.Util.FormatarData(Js.Util.RetornarDataJs(dataFinal, "23:59"), 'isoDateTime');
+
+
+            url = urlApiEcommerce;
+            url += "pedidos?idPedido=" + $("#IdPedido").val() + "&cliente=" + $("#Cliente_NomeOuRazao").val() + "&codPedidoStatus=" + $("#CodPedidoStatus").val() +
+                "&dataInicial=" + dataInicial + "&dataFinal=" + dataFinal + "&idVendedor=" + idVendedor;
+
+
+            Js.Util.Get(url,
+                        null,
+                        function (response) { //OnSucess
+                            
+                            var tblPrincipalResultado = $("#tblPrincipalResultado");
+
+                            $(tblPrincipalResultado).find("tbody").remove();
+
+                            if (response.Valido) {
+
+                                if (response.Dados == null || response.Dados == undefined) {
+
+                                    $("#hdnRegistroNaoEncontrado").removeClass("hidden");
+                                    tblPrincipalResultado.addClass("hidden");
+
+                                }
+                                else {
+
+                                    tblPrincipalResultado.removeClass("hidden");
+
+                                    var tbody = tblPrincipalResultado.append('<tbody />').children('tbody');
+
+                                    if (response.Dados.length == 0)
+                                        $("#hdnRegistroNaoEncontrado").removeClass("hidden");
+                                    else
+                                        $("#hdnRegistroNaoEncontrado").addClass("hidden");
+
+                                    if (response.Dados.length >= 1000) {
+                                        Js.Util.Janela.MostrarMensagem("Só serão exibidos os 1000 primeiros registros da pesquisa. Por favor, melhore o filtro da sua pesquisa");
+                                    }
+
+                                    $.each(response.Dados, function () {
+
+                                        var linha = "<tr linhaGrid='true'  class='nopadding' chaveGrid='" + this.IdPedido + "' class='savoia-cursor-edicao'>";
+                                        linha += "<td >" + this.IdPedido+ "</td>";
+                                        linha += "<td >" + this.Cliente.NomeOuRazao + "</td>";
+                                        linha += "<td >" + Js.Util.FormatarData(this.DataCadastro, "data-hora-ptBr", 'isoDateTime') + "</td>";
+                                        linha += "<td >" + Js.Util.FormatarValorBrasil(this.ValorTotalComFrete, true) + "</td>";
+                                        linha += "<td >" + this.PedidoVendedor[0].DescPedidoStatus + "</td>";
+                                        linha += "</tr>";
+
+                                        tbody.append(linha);
+                                        linhaAdicionada = tbody.find('tr:last');
+
+                                        //Tratamento linha do grid
+                                        linhaAdicionada.find("td").addClass("savoia-cursor-edicao");
+                                        linhaAdicionada.find("td").click(function () {
+
+                                            AbrirCadastro('@ConstantesComum.Acao.Alterar', $(this).closest('tr').attr('chaveGrid'));
+
+                                        });
+
+                                    });
+                                }
+                            }
+                    },
+                    function (xhr, ajaxOptions, thrownError) { //OnError
+
+                        if (xhr.status == 400 || xhr.status == 500) {
+                            var mensagem = "";
+
+                            var data = JSON.parse(xhr.responseText);
+
+                            $.each(data.Mensagens, function () {
+
+                                if (this.Campo == null)
+                                    mensagem += this.Mensagem + "\n";
+
+                            });
+
+                            if (mensagem != "")
+                                Js.Util.Janela.MostrarMensagemErro(mensagem);
+
+                        }
+                        else
+                           Js.Util.Janela.MostrarMensagemErro(mensagem);
+                
+
+                    },
+                true,
+                function (request) {
+                    request.setRequestHeader("authorization", "Bearer " +  USUARIO_TOKEN);
+                });
+
+        }
+        // ++++++++++++++++++++++++++++++++++++++ FIM DAS FUNCOES ++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+    </script>
+    <style>
+    </style>
+}
+<div class="row">
+    <div class="col-lg-12">
+        <form role="form" method="post" id="frmPrincipal">
+            <fieldset>
+                <legend>Pesquisa de Pedidos</legend>
+                <div class="row">
+                    <div class="col-lg-9">
+                        <div class="form-row">
+                            <div class="form-group col-lg-3" id="divCliente">
+                                <label>Vendedor</label>
+                                <select class="form-control input-sm" id="IdVendedor" name="IdVendedor"></select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-9">
+                        <div class="form-row">
+                            <div class="form-group col-lg-3">
+                                <label>IdPedido</label>
+                                <input type="text" class="form-control input-sm" id="IdPedido" name="IdPedido">
+                            </div>
+                            <div class="form-group col-lg-5">
+                                <label>Cliente</label>
+                                <input type="text" class="form-control input-sm" id="Cliente_NomeOuRazao" name="Cliente_NomeOuRazao">
+                            </div>
+                            <div class="form-group col-lg-4">
+                                <label>CNPJ</label>
+                                <input type="text" class="form-control input-sm savoia-campo-cnpj" id="Cliente_CpfOuCnpj" name="Cliente_CpfOuCnpj">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-lg-3">
+                                <label>Data Inicial</label>
+
+                                <input type="text" class="form-control input-sm savoia-campo-data" id="DataInicial" name="DataInicial">
+                            </div>
+                            <div class="form-group col-lg-3">
+                                <label>Data Final</label>
+                                <input type="text" class="form-control input-sm savoia-campo-data" id="DataFinal" name="DataFinal">
+                            </div>
+                            <div class="form-group col-lg-3">
+                                <label>Status</label>
+                                <select class="form-control input-sm" id="CodPedidoStatus" name="CodPedidoStatus"></select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-3">
+                        <div class="form-group savoia-row-top">
+                            <button type="button" value="Pesquisar" class="btn btn-primary" id="btnPesquisar">
+                                <span class="glyphicon glyphicon-search"></span> Pesquisar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+        </form>
+    </div>
+</div>
+<div class="row savoia-row-top">
+    <div class="col-lg-12">
+        <table class="table table-striped table-hover table-condensed hidden" id="tblPrincipalResultado">
+            <thead>
+                <tr>
+                    <th>Id Pedido</th>
+                    <th>Cliente</th>
+                    <th>Data</th>
+                    <th>Valor Total</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+        </table>
+
+        <center class="hidden" id="hdnRegistroNaoEncontrado"><strong>@ConstantesBase.MENSAGEM_REGISTRO_NAO_ENCONTRADO</strong></center>
+
+    </div>
+</div>

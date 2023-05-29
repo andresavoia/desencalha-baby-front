@@ -1,0 +1,355 @@
+﻿@using Savoia.Ecommerce.Host.Admin.WebApp.Controllers
+@using Savoia.Ecommerce.Host.Admin.WebApp.Util
+@{
+    Layout = "~/Views/Shared/_LayoutPrincipal.cshtml";
+}
+@section Scripts{
+
+    <script>
+        var urlApiEcommerce = '@ViewData["apiEcommerce"]'
+        var pesquisou = false;
+
+        $(document).ready(function () {
+
+            Js.Util.TratarEnterForm("frmPrincipal", "btnPesquisar");
+            CarregarCategoria(urlApiEcommerce, $("#IdCategoria"));
+            TratarUsuarioPerfil();
+            
+            $("#btnNovo").click(function () {
+                AbrirCadastro('@ConstantesComum.Acao.Incluir')
+            });
+
+            //Botão Pesquisar
+            $("#btnPesquisar").click(function () {
+
+                var validacaoForm = true;
+
+                validacaoForm = Js.Util.ValidarForm($("#frmPrincipal"));
+
+                if (validacaoForm) {
+                    pesquisou = true;
+                    Pesquisar();
+                }
+            });
+             
+            //Botão Aplicar
+            $("#btnSalvar").click(function () {
+
+                Js.Util.Janela.MostrarMensagemConfirmacao("Tem certeza que deseja salvar os produtos com os novos preços. Essa situação é irreversivel!",
+                    function () {
+
+                        var Produtos = [];
+
+                        $("#tblPrincipalResultado tbody tr").each(function (index) {
+
+                            var valor = $(this).find("input[tipo='valor']").val();
+                            var idProduto = $(this).attr('chaveGrid');
+                            
+                            valor = Js.Util.FormatarValorPadrao(valor)
+
+                            Produtos.push(
+                                {
+                                    "IdProduto": idProduto,
+                                    "ValorVenda": valor
+                                })
+                        });
+                        
+                        Js.Util.Post(urlApiEcommerce + "produtos/precos",
+                            {
+                                Produtos
+                            },
+                            function (response) { //OnSucess
+
+                                if (response != null && response.Valido) {
+                                    Js.Util.Janela.MostrarMensagem(response.Mensagens[0].Mensagem, null, function () { Pesquisar(); });
+                                }
+
+                            },
+                            function (xhr, ajaxOptions, thrownError) { //OnError
+
+                                var existeValidacaoCampo = false;
+
+                                if (xhr.status == 400 || xhr.status == 500) {
+
+                                    var data = JSON.parse(xhr.responseText);
+
+                                    $.each(data.Mensagens, function () {
+
+                                        if ($("#" + this.Campo).length > 0) {
+                                            $("#" + this.Campo).rules("add",
+                                                {
+                                                    required: true,
+                                                    messages: {
+                                                        required: this.Mensagem
+                                                    }
+                                                }
+                                            );
+                                            existeValidacaoCampo = true;
+
+                                        }
+                                        else {
+                                            console.log('Campo não encontrado no form: ' + this.Campo);
+                                        }
+
+
+                                    });
+
+                                    if (existeValidacaoCampo)
+                                        Js.Util.ValidarForm($("#frmPrincipal"));
+
+                                }
+
+                                TratarErro(xhr, ajaxOptions, thrownError);
+                            },
+                            true,
+                            function (request) {
+                                request.setRequestHeader("authorization", "Bearer " +  USUARIO_TOKEN);
+                            });
+
+
+                    });
+            });
+
+            $("#lblTitulo").html("Pesquisa de Produtos")
+       
+        }); //Fim ready
+
+        // ++++++++++++++++++++++++++++++++++++++ INICIO DAS FUNCOES ++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+        TratarUsuarioPerfil = function () {
+
+            if (USUARIO_TIPO == ConstantesEcommerce.CodUsuarioTipoAdmin) {
+                $("#divCliente").removeClass("hidden")
+                CarregarCliente(urlApiEcommerce, $("#IdCliente"));
+            }
+            else if(USUARIO_TIPO == ConstantesEcommerce.CodUsuarioTipoCliente){
+                $("#divCliente").addClass("hidden")
+            }
+
+        }
+
+        AbrirCadastro = function (acao, chaveGrid) {
+
+            var url;
+
+            if (acao == '@ConstantesComum.Acao.Incluir') {
+                url = '@Url.Action(nameof(SistemaController.ProdutoCadastrar), "Sistema", new { acao = FuncoesComum.CodificarUrl(ConstantesComum.Acao.Incluir.ToString()), nivelPopup = 0, funcaoPosGravacao = "function () { parent.Pesquisar(); } " },Context.Request.Scheme)';
+            }
+            else {
+                url = '@Url.Action(nameof(SistemaController.ProdutoCadastrar), "Sistema", new { acao = FuncoesComum.CodificarUrl(ConstantesComum.Acao.Alterar.ToString()), nivelPopup = 0, funcaoPosGravacao = "function () { parent.Pesquisar(); } "},Context.Request.Scheme)';
+                url += "&id=" + chaveGrid;
+
+            }
+
+
+            Js.Util.Janela.AbrirJanela(
+                         url,
+                         'Cadastro de Produto',
+                         {
+                             tamanho: 'MuitoGrande',
+                             altura: '585'
+                         });
+        }
+
+        Pesquisar = function () {
+
+            if (!pesquisou)
+                return;
+
+            var idCliente ="";
+
+            if (USUARIO_TIPO == ConstantesEcommerce.CodUsuarioTipoAdmin)
+                idCliente = $("#IdCliente").val()
+
+            $("#btnSalvar").addClass("hidden");
+
+            var status = "";
+                         
+            url = urlApiEcommerce;
+            url += "produtos?codInterno=" + $("#CodInterno").val() + "&titulo=" + $("#Titulo").val() + "&idCategoria=" + $("#IdCategoria").val() + "&idCliente=" + idCliente
+                + "&ativo=" + $("#Ativo").val()  + "&promocao=" + ($("#Promocao:checked").val() ? "true" : "") + "&lancamento=" + ($("#Lancamento:checked").val() ? "true" : "") 
+                + "&webAppAdmin=true" ;
+
+            Js.Util.Get(url,
+                        null,
+                        function (response) { //OnSucess
+                            
+                            var tblPrincipalResultado = $("#tblPrincipalResultado");
+
+                            $(tblPrincipalResultado).find("tbody").remove();
+
+                            if (response.Valido) {
+
+                                if (response.Dados == null || response.Dados == undefined) {
+
+                                    $("#hdnRegistroNaoEncontrado").removeClass("hidden");
+                                    tblPrincipalResultado.addClass("hidden");
+                                    
+
+                                }
+                                else {
+
+                                   
+                                    tblPrincipalResultado.removeClass("hidden");
+
+                                    var tbody = tblPrincipalResultado.append('<tbody />').children('tbody');
+
+                                    $("#btnSalvar").addClass("hidden");
+
+
+                                    if (response.Dados.length == 0)
+                                        $("#hdnRegistroNaoEncontrado").removeClass("hidden");
+                                    else {
+                                        $("#hdnRegistroNaoEncontrado").addClass("hidden");
+
+                                    }
+
+                                    if (response.Dados.length >= 1000) {
+                                        Js.Util.Janela.MostrarMensagem("Só serão exibidos os 1000 primeiros registros da pesquisa. Por favor, melhore o filtro da sua pesquisa");
+                                    }
+
+                                    $.each(response.Dados, function () {
+
+                                        var linha = "<tr linhaGrid='true'  class='nopadding' chaveGrid='" + this.IdProduto + "' class='savoia-cursor-edicao'>";
+                                        linha += "<td >" + (this.CodInterno != null ? this.CodInterno : " ") + "</td>";
+                                        linha += "<td >" + this.Titulo + "</td>";
+                                        linha += "<td >R$ " + Js.Util.FormatarValorBrasil(this.ValorVenda, false) + "</td>";
+                                        linha += "<td >" + (this.ProdutoPromocao ? "<img src='/images/ico-ok-20x20.png'>" : " ") + "</td>";
+                                        linha += "<td >" + (this.ProdutoLancamento ? "<img src='/images/ico-ok-20x20.png'>" : " ") + "</td>";
+                                        linha += "<td >" + (this.Ativo ? "Ativo" : "Inativo") + "</td>";
+                                        linha += "</tr>";
+
+                                        tbody.append(linha);
+                                        linhaAdicionada = tbody.find('tr:last');
+
+                                linhaAdicionada.find("td").addClass("savoia-cursor-edicao");
+                                linhaAdicionada.find("td").click(function () {
+
+                                    AbrirCadastro('@ConstantesComum.Acao.Alterar', $(this).closest('tr').attr('chaveGrid'));
+
+                                });
+
+                                        
+                                    });
+                                }
+                            }
+                    },
+                    function (xhr, ajaxOptions, thrownError) { //OnError
+
+                        if (xhr.status == 400 || xhr.status == 500) {
+                            var mensagem = "";
+
+                            var data = JSON.parse(xhr.responseText);
+
+                            $.each(data.Mensagens, function () {
+
+                                if (this.Campo == null)
+                                    mensagem += this.Mensagem + "\n";
+
+                            });
+
+                            if (mensagem != "")
+                                Js.Util.Janela.MostrarMensagemErro(mensagem);
+
+                        }
+                        else
+                           Js.Util.Janela.MostrarMensagemErro(mensagem);
+                
+
+                    },
+                true,
+                function (request) {
+                    request.setRequestHeader("authorization", "Bearer " +  USUARIO_TOKEN);
+                });
+
+        }
+        // ++++++++++++++++++++++++++++++++++++++ FIM DAS FUNCOES ++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+    </script>
+    <style>
+    </style>
+}
+<div class="row">
+    <div class="col-lg-12">
+        <form role="form" method="post" id="frmPrincipal">
+            <fieldset>
+                <legend id="lblTitulo"></legend>
+                <div class="row">
+                    <div class="col-lg-9">
+                        <div class="form-row">
+                            <div class="form-group col-lg-3">
+                                <label>Cód Interno</label>
+                                <input type="text" class="form-control input-sm" id="CodInterno" name="CodInterno">
+                            </div>
+                            <div class="form-group col-lg-5">
+                                <label>Titulo</label>
+                                <input type="text" class="form-control input-sm" id="Titulo" name="Titulo">
+                            </div>
+                            <div class="form-group col-lg-4">
+                                <label>Categoria</label>
+                                <select class="form-control input-sm" id="IdCategoria" name="IdCategoria"></select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-lg-3">
+                                <label for="Ativo">Status</label>
+                                <select class="form-control input-sm" id="Ativo" name="Ativo">
+                                    <option value="">--selecione--</option>
+                                    <option value="true">Ativo</option>
+                                    <option value="false">Inativo</option>
+                                </select>
+                            </div>
+                                <div class="form-group col-lg-5" id="divCliente">
+                                <label>Cliente</label>
+                                <select class="form-control input-sm" id="IdCliente" name="IdCliente"></select>
+                            </div>
+                            <div class="form-group col-lg-2">
+                                <input type="checkbox" class="form-check-input" id="Promocao" name="Promocao" value="true" style="margin-top:30px">&nbsp;Promoção
+                            </div>
+                            <div class="form-group col-lg-2">
+                                <input type="checkbox" class="form-check-input" id="Lancamento" name="Lancamento" value="true" style="margin-top:30px;">&nbsp;Lançamento
+                            </div>
+
+                        </div>
+                    </div>
+                    <div class="col-lg-3">
+                        <div class="form-group savoia-row-top">
+
+                            <button type="button" value="Pesquisar" class="btn btn-default" id="btnPesquisar">
+                                <span class="glyphicon glyphicon-search"></span> Pesquisar
+                            </button>
+                            <button type="button" class="btn btn-primary" id="btnNovo" style="margin-left:2px;width:95px">
+                                <span class="glyphicon glyphicon-plus"></span> Novo
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+</fieldset>
+        </form>
+    </div>
+</div>
+<div class="row savoia-row-top">
+    <div class="col-lg-12">
+        <table class="table table-striped table-hover table-condensed hidden" id="tblPrincipalResultado">
+            <thead>
+                <tr>
+                    <th width="100px">Cód Interno</th>
+                    <th>Titulo</th>
+                    <th>Valor</th>
+                    <th>Promoção</th>
+                    <th>Lançamento</th>
+                    <th>Ativo</th>
+
+                </tr>
+            </thead>
+        </table>
+
+        <center class="hidden" id="hdnRegistroNaoEncontrado"><strong>@ConstantesBase.MENSAGEM_REGISTRO_NAO_ENCONTRADO</strong></center>
+
+    </div>
+</div>

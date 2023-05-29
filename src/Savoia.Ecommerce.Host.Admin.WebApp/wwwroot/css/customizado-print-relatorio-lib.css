@@ -1,0 +1,13 @@
+﻿@page {
+  size: landscape;
+  margin: 15px;
+}
+@media print {
+  html, body {
+    width: 900px;
+  }
+  body {
+    margin: 15px auto;
+  }
+
+}

@@ -1,0 +1,23 @@
+﻿Bootswatch 
+   http://bootswatch.com/spacelab/
+bootstrap3-dialog-master 
+   https://nakupanda.github.io/bootstrap3-dialog/
+jquery-mask
+   https://igorescobar.github.io/jQuery-Mask-Plugin/
+validation-mvc
+   https://github.com/aburakab/ASP-MVC-Tooltip-Validation
+
+jquery-validation-unobtrusive-method
+   https://github.com/lucas-silva/mvczin/blob/master/README.md
+
+bootstrap-ajax-typeahead-master
+   http://plugins.upbootstrap.com/bootstrap-ajax-typeahead/
+
+chart-js
+   https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.1.6/Chart.bundle.min.js
+
+TabletoExcel
+	https://gist.github.com/insin/1031969
+
+Foram adicionados na mão, pois o bower estava com problemas para instalar
+

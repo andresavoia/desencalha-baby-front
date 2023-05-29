@@ -1,0 +1,407 @@
+﻿@{
+    Layout = "_LayoutPesquisa";
+}
+
+@section breadCrumb {
+    <div id="breadcrumb">
+        <div class="container">
+            <ul class="breadcrumb">
+                <li><a href="/">Home</a></li>
+                <li>Cliente</li>
+                <li class="active">Pedidos</li>
+            </ul>
+        </div>
+    </div>
+}
+
+
+
+
+<script>
+
+    $(document).ready(function () {
+
+        if ($.trim(USUARIO_TOKEN) == "")
+            RedirecionarLogin(true);
+
+        ListarPedido();
+
+        $('.header').click(function(){
+            $(this).toggleClass('expand').nextUntil('.header').slideToggle("slow");
+        });
+    });
+
+    Voltar = function () {
+        //$("#divLista").removeClass("hidden");
+        //$("#divPedido").addClass("hidden");
+        location.reload();
+    }
+
+    AbrirPedido = function (idPedido) {
+        var url = URL_SERVICO + "pedidos/" + idPedido;
+
+        $("#divLista").addClass("hidden");
+        $("#divPedido").removeClass("hidden");
+        $("#lblIdPedido").html("Nº " + idPedido);
+
+        Js.Util.Get(url,
+            null,
+            function (response) { //OnSucess
+
+                if (response != null && response.Valido) {
+
+                    $("#lblStatus").text(response.Dados.DescPedidoStatus);
+                    $("#lblDataPedido").html(Js.Util.FormatarData(response.Dados.DataCadastro, "data-ptBr", 'isoDateTime'));
+
+                    if (response.Dados.Observacao !=null && response.Dados.Observacao != undefined && response.Dados.Observacao != "") {
+                        $("#trObservacao").removeClass("hidden");
+                            $("#lblObservacao").text(response.Dados.Observacao);
+                    }
+
+                    var endereco = "";
+
+                    if (response.Dados.Cliente.EnderecoEntrega.Endereco != null)
+                        endereco += response.Dados.Cliente.EnderecoEntrega.Endereco;
+
+                    if (response.Dados.Cliente.EnderecoEntrega.Complemento != null)
+                        endereco += " - " + response.Dados.Cliente.EnderecoEntrega.Complemento;
+
+
+                    if (response.Dados.Cliente.EnderecoEntrega.Cep != null)
+                        endereco += " - " + response.Dados.Cliente.EnderecoEntrega.Cep;
+
+                    if (response.Dados.Cliente.EnderecoEntrega.Cidade != null)
+                        endereco += " - " + response.Dados.Cliente.EnderecoEntrega.Cidade.Titulo;
+
+                    if (response.Dados.Cliente.EnderecoEntrega.Cidade.Estado.UF != null)
+                        endereco += " - " + response.Dados.Cliente.EnderecoEntrega.Cidade.Estado.UF;
+
+                    $("#EnderecoEntrega_Endereco").html(endereco);
+
+                    var carrinhoDetalhe = response.Dados;
+                    $("#tblItens tbody").empty();
+
+
+                    if (carrinhoDetalhe.PedidoVendedor != undefined && carrinhoDetalhe.PedidoVendedor != null) {
+
+                        let tblClone = $("#tblDadosPedido tbody").clone(true);
+                        let tblCloneAppend = tblClone.html();
+
+                        var contador = 1;
+
+                        $.each(carrinhoDetalhe.PedidoVendedor, function () {
+
+                            $("#lblVendedor").html(this.NomeVendedor);
+                            $("#lblPrevisaoEntrega").html(Js.Util.FormatarData(this.DataPrevisaoEntrega, "data-ptBr", 'isoDateTime'));
+
+                            //Quando existir informação de rastreio do pedido
+                            if(this.Rastreio != undefined && this.Rastreio != null)
+                            {
+                                $("#trRastreio").removeClass('hidden');
+                                $("#lblCodigoRastreio").html(this.Rastreio.CodigoRastreio);
+                                $("#lblLinkRastreio").html(this.Rastreio.LinkRastreio);
+                                $("#lblLinkRastreio").attr("href", this.Rastreio.LinkRastreio);
+                            }
+
+                            //Quando existir anexos para download
+                            if (this.Anexos != undefined && this.Anexos != null) {
+
+                                $("#trBoletoNotaFiscal").removeClass('hidden');    
+
+                                $.each(this.Anexos, function () {
+
+                                    var urlAnexos = URL_SERVICO + "/" + this.Caminho;
+
+                                    var objeto = "<div style='cursor:pointer;display: inline-block;border:1px solid whitesmoke;height:20px;margin:5px;text-decoration:none;' align='center'> <img src='/img/ico-download-20x20.png' ></img> <a href='" + urlAnexos + "' target='_blank' caminho='" + this.Caminho + "'style='text-decoration: none' nome='" + this.Nome + "'>" + this.Nome + "</a>" + "<BR></div>";
+                                        $('#divBoletosNfs').append(objeto);
+                                });
+                            }
+
+
+                            if (this.Itens != undefined && this.Itens != null) {
+
+                                $.each(this.Itens, function () {
+
+                                    var urlProduto = "/produto/detalhe?idProduto=" + this.IdProduto;
+                                    let imagemPrincipal = URL_SERVICO + "/" + this.CaminhoImagemPrincipal.toLowerCase().replace(".jpg", "_M.jpg");
+
+                                    var objDesconto = "";
+                                    var objDescontoTotal = "";
+
+                                    let produto = `
+                                        <tr>
+                                            <td class="thumb"> <img src="${imagemPrincipal}" alt=""></td>
+                                            <td class="details">
+                                                <a href="${urlProduto}">${this.Titulo}</a>
+                                            </td>
+                                            <td class="price text-center"><strong>${Js.Util.FormatarValorBrasil(this.Valor, true)}</strong>${objDesconto}</td>
+                                            <td class="text-center"><strong>${this.Qt}</strong></strong></td>
+                                            <td class="total text-center"><strong class="primary-color">${Js.Util.FormatarValorBrasil(this.ValorTotal, true)}</strong>${objDescontoTotal}</strong></td>
+                                        </tr>
+                                    `
+                                    $("#tblItens tbody").append(produto);    
+                                    $(".savoia-campo-numero").mask('00000000', { reverse: true });
+                                });
+                            }
+
+                            $("#thTotal").html(Js.Util.FormatarValorBrasil(this.ValorTotal, true));
+                            $("#thFrete").html("<strong>" + Js.Util.FormatarValorBrasil(this.ValorTotalFrete, true) + "</strong>");
+                            $("#thTotalComFrete").text(Js.Util.FormatarValorBrasil(this.ValorTotalComFrete, true));
+
+
+                            AlteraIdObjeto("#thTotal", "thTotal_" + this.IdVendedor);
+                            AlteraIdObjeto("#thFrete", "thFrete_" + this.IdVendedor);
+                            AlteraIdObjeto("#thTotalComFrete", "thTotalComFrete_" + this.IdVendedor);
+                            AlteraIdObjeto("#tblItens", "tblItens_" + this.IdVendedor);
+                            AlteraIdObjeto("#tblPedidoVendedor", "tblPedidoVendedor_" + this.IdVendedor);
+                            AlteraIdObjeto("#lblVendedor", "lblVendedor_" + this.IdVendedor);
+                            AlteraIdObjeto("#lblPrevisaoEntrega", "lblPrevisaoEntrega_" + this.IdVendedor);
+
+                            AlteraIdObjeto("#trRastreio", "trRastreio_" + this.IdVendedor);
+                            AlteraIdObjeto("#lblCodigoRastreio", "lblCodigoRastreio_" + this.IdVendedor);
+                            AlteraIdObjeto("#lblLinkRastreio", "lblLinkRastreio_" + this.IdVendedor);
+                            AlteraIdObjeto("#trBoletoNotaFiscal", "trBoletoNotaFiscal_" + this.IdVendedor);
+                            AlteraIdObjeto("#divBoletosNfs", "divBoletosNfs_" + this.IdVendedor);
+
+
+                            if(contador < carrinhoDetalhe.PedidoVendedor.length)
+                                $("#tblDadosPedido").append(tblCloneAppend);
+                            
+
+                            contador++;
+
+                        });
+                    }
+                }
+            },
+            function (xhr, ajaxOptions, thrownError) { //OnError
+                TratarErro(xhr, ajaxOptions, thrownError);
+            },
+            true,
+            function (request) {
+                request.setRequestHeader("authorization", "Bearer " +  USUARIO_TOKEN);
+                request.setRequestHeader("External", "true");
+            });
+    }
+
+    AlteraIdObjeto = function(objeto, newId) { 
+        $(objeto).attr('id', newId);
+    }
+
+    ListarPedido = function () {
+
+        url = URL_SERVICO + 'pedidos';
+
+        ConsumirServico
+            ("GET",
+            url,
+            null,
+            function (response) { //OnSucess
+
+                if (response.Valido) {
+                    if (response.Dados != null && response.Dados != undefined) {
+
+                        var pedidos = response.Dados;
+
+                            if (pedidos != undefined && pedidos != null && pedidos.length>0) {
+
+                            $.each(pedidos, function () {
+ 
+                                let pedido = `
+                                    <tr>
+                                        <td ><a href="#" onclick='javascript:AbrirPedido(${this.IdPedido});'>${this.IdPedido}</a></td>
+                                        <td class="price text-center"><strong>${Js.Util.FormatarValorBrasil(this.ValorTotalComFrete, true)}</strong></td>
+                                        <td class="text-center"><strong>${this.DescPedidoStatus}</strong></td>
+                                        <td class="text-center"><strong>${Js.Util.FormatarData(this.DataCadastro, "data-hora-ptBr", 'isoDateTime')}</strong></td>
+                                        <td class="text-center"><button class="primary-btn" onclick='javascript:AbrirPedido(${this.IdPedido});return false;'><i class="fa fa-search"></i> Visualizar</button></td>
+                                    
+                                    </tr>
+                                    `
+                                $("#tblPrincipal tbody").append(pedido);
+                            });
+
+                        }
+                        else
+                        {
+                            alert('a')
+                            $("#tblPrincipal").addClass("hidden");
+                            $("#divSemItens").removeClass("hidden");
+                        }
+                    }
+                }
+            },
+            function (xhr, ajaxOptions, thrownError) { //OnError
+
+                if (xhr.status == 400 || xhr.status == 500) {
+
+                    var mensagem = "";
+
+                    var data = JSON.parse(xhr.responseText);
+
+                    $.each(data.Mensagens, function () {
+
+                        if (this.Campo == null)
+                            mensagem += this.Mensagem + "\n";
+
+                    });
+
+                    if (mensagem != "")
+                        Js.Util.Janela.MostrarMensagemErro(mensagem);
+
+                }
+                else if (xhr.status == 401) {
+                    LimparStorage();
+                    RedirecionarLogin();
+                }
+                else
+                    Js.Util.Janela.MostrarMensagemErro(mensagem);
+            },
+            true,
+            function (request) {
+                request.setRequestHeader("authorization", "Bearer " +  USUARIO_TOKEN);
+                request.setRequestHeader("External", "true");
+            });
+
+        return listaRetorno;
+    }
+
+
+</script>
+<!-- section -->
+<div>
+    <!-- container -->
+    <div class="container">
+        <div class="row" id="divLista" >
+            <form id="checkout-form" class="clearfix">
+                <div class="col-md-12">
+                    <div class="order-summary clearfix">
+                        <p>
+                            Abaixo seguem os últimos 20 pedidos que foram realizados com a Desencalha Estoque
+                        </p>
+                        <div class="section-title">
+                            <h3 class="title">Pedidos</h3>
+                        </div>
+                        <table class="shopping-cart-table table" id="tblPrincipal">
+                            <thead>
+                                <tr>
+                                    <th>IDPedido</th>
+                                    <th class="text-center">Valor Total</th>
+                                    <th class="text-center">Status</th>
+                                    <th class="text-center">Data</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+
+                        <div id="divSemItens" class="hidden"><center><b>Não existem pedidos para visualizar</b></center></div>
+                    </div>
+
+                </div>
+            </form>
+        </div>
+        <!-- /row -->
+        <div id="divPedido" class="hidden">
+            <div class="col-md-12">
+                <div class="order-summary clearfix">
+                    <div class="section-title">
+                        <h3 class="title">Pedido <label id="lblIdPedido"></label></h3>
+                        <table cellpadding="8" cellspacing="8" style="width:70%">
+                            <tr>
+                                <td><strong>Data Pedido:</strong></td>
+                                <td id="lblDataPedido"></td>
+                                <td><strong>Status:</strong></td>
+                                <td id="lblStatus" class="label label-success"></td>
+                            </tr>
+                            <tr id="trEnderecoEntrega">
+                                <td><strong>Endereço de Entrega:</strong></td>
+                                <TD id="EnderecoEntrega_Endereco"></TD>
+                            </tr>
+                            <tr id="trObservacao" class="hidden">
+                                <td><strong>Observação:</strong></td>
+                                <td id="lblObservacao" style="color:#ff3300" colspan="3"></td>
+                            </tr>
+                        </table>
+                        <br />
+                    </div>
+                </div>
+
+            </div>
+                <div class="col-md-12">
+                    <div class="order-summary clearfix">
+                        
+                        <table cellpadding="8" cellspacing="8" style="width:100%" id="tblDadosPedido">
+                            <tr>
+                                <td>
+                                    <br />
+                                    <table cellpadding="8" cellspacing="8" style="width:100%" id="tblPedidoVendedor">
+                                        @*<tr class="header expand">*@
+                                        <tr>
+                                            <td class="section-title" width="85%">Vendedor <h4><label id="lblVendedor"></label></h4></td>
+                                            <td class="section-title">Previsão de Entrega <h4><label id="lblPrevisaoEntrega"></label></h4></td>
+                                        </tr>
+                                        <tr class="hidden" id="trRastreio">
+                                            <td colspan="2">
+                                                <br/>
+                                                Código Rastreio: <label id="lblCodigoRastreio"></label><br/>
+                                                Link Rastreio: <strong><a href="" style="cursor:pointer;" id="lblLinkRastreio" target="_blank"></a></strong>
+                                            </td>
+                                        </tr>
+                                        <tr class="hidden" id="trBoletoNotaFiscal">
+                                            <td>
+                                                <div id="divBoletosNfs" style="width:auto;">Baixar arquivo(s): </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan = 2>
+                                                <table class="shopping-cart-table table" id="tblItens" style="margin-top:10px;">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Produto</th>
+                                                            <th></th>
+                                                            <th class="text-center">Preço</th>
+                                                            <th class="text-center">Quantidade</th>
+                                                            <th class="text-center">Total</th>
+                                                            <th class="text-right"></th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody></tbody>
+                                                    <tfoot>
+                                                        <tr>
+                                                            <th class="empty" colspan="3"></th>
+                                                            <th>TOTAL</th>
+                                                            <th colspan="2" class="sub-total" id="thTotal">R$ 0,00</th>
+                                                        </tr>
+                                                        <tr>
+                                                            <th class="empty" colspan="3"></th>
+                                                            <th>FRETE</th>
+                                                            <td colspan="2" class="sub-total" id="thFrete">R$ 0,00</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th class="empty" colspan="3"></th>
+                                                            <th>TOTAL COM FRETE</th>
+                                                            <th colspan="2" class="total" id="thTotalComFrete">R$ 0,00</th>
+                                                        </tr>
+                                                    </tfoot>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+
+                        
+                        
+                        
+
+                        
+                        <div class="pull-left">
+                            <button class="primary-btn" id="btnVoltar" onclick="javascript: Voltar(); return false;">Voltar</button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    <!-- /container -->
+</div>

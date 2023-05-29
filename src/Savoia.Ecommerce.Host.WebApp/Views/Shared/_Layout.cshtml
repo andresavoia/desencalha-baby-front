@@ -1,0 +1,1076 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+
+    <title>..:: Desencalha Estoque ::..</title>
+
+    <!-- Google font -->
+    <link href="https://fonts.googleapis.com/css?family=Hind:400,700" rel="stylesheet">
+
+    <!-- Bootstrap -->
+    <link type="text/css" rel="stylesheet" href="/css/bootstrap.min.css" /> <!--boostrap 3.3.6-->
+
+    <!-- Slick -->
+    <link type="text/css" rel="stylesheet" href="/css/slick.css" />
+    <link type="text/css" rel="stylesheet" href="/css/slick-theme.css" />
+
+    <!-- nouislider -->
+    <link type="text/css" rel="stylesheet" href="/css/nouislider.min.css" />
+
+    <!-- Font Awesome Icon -->
+    <link rel="stylesheet" href="/css/font-awesome.min.css">
+
+    <!-- Custom stlylesheet -->
+    <link type="text/css" rel="stylesheet" href="/css/style.css" asp-append-version="true"/>
+    <link type="text/css" rel="stylesheet" href="~/css/estilo-personalizado.css" />
+    <link rel="stylesheet" href="/lib/bootstrap-ajax-typeahead-master/css/typeahead.css" />
+    <link rel="stylesheet" href="/lib/bootstrap-datepicker-master/dist/css/bootstrap-datepicker.min.css" />
+    <link rel="stylesheet" href="/lib/cookie.bar/jquery.cookiebar.css" />
+
+    <script src="/js/jquery.min.js"></script>
+    <script src="/lib/jquery-mask/dist/jquery.mask.min.js"></script>
+    <script src="/lib/jquery-maskmoney/dist/jquery-maskmoney.min.js"></script>
+    <script src="/lib/bootstrap-datepicker-master/dist/js/bootstrap-datepicker.min.js"></script>
+
+    <script src="~/lib/bootstrap-ajax-typeahead-master/js/bootstrap-typeahead.0.0.5.js" asp-append-version="true"></script>
+
+    <script src="/js/scripts.site.js"  asp-append-version="true"></script>
+    <script type="text/javascript" src="~/lib/cookie.bar/jquery.cookiebar.js"></script>
+
+    <script>
+
+        var NOME_COOKIE_CEP = "cepUsuario";
+        var TIMEOUT_DIAS_COOKIE_CEP = 10;
+
+        var URL_SERVICO = "@ViewBag.UrlApi"; 
+        var URL_SISTEMA_COMERCIAL = "@ViewBag.UrlSistemaComercial"; 
+        var URL_MODULO_ADMIN = "@ViewBag.UrlModuloAdmin"; 
+        var USUARIO_SESSAO = "@ViewBag.Sessao";
+        var USUARIO_TOKEN = localStorage.getItem("authorization");
+        var USUARIO_NOME = localStorage.getItem("nome");
+        var USUARIO_CATEGORIAS = localStorage.getItem("categorias");
+
+        var USUARIO_CEP_COOKIE =  Js.Util.GetCookie(NOME_COOKIE_CEP, "", -1);(NOME_COOKIE_CEP);
+
+        var CARRINHO = {}
+        // ------------------------  VARIAVEIS GLOBAIS DO SISTEMA ------------------------------------]
+
+        $(document).ready(function () {
+          
+            // **********  TRATAMENTO DO CEP DO COOKIE ********************************** 
+            /*
+            //verificar cookie do cep preenchido, ou se ta logado
+            var cookieCep = USUARIO_CEP_COOKIE;
+
+            if ((USUARIO_TOKEN == "" && cookieCep == "") 
+                    && window.location.href.indexOf('/cliente/login') == -1) {
+
+                    $('#divModalCep').modal('show');
+
+            }else
+                PreencherClienteCep(cookieCep);
+
+            $("#btnCepUsuarioConfirmar").click(function() {
+                
+                LimparCampoValidacaoForm();
+
+                if ($("#txtCepUsuario").val().length < 9) {
+                    TratarCampoUnicoValidacao("txtCepUsuario", "Preencha corretamente o campo CEP", false)
+                }
+                else {
+                    PreencherClienteCep($("#txtCepUsuario").val());
+                    Js.Util.SetCookie(NOME_COOKIE_CEP, $("#txtCepUsuario").val(), TIMEOUT_DIAS_COOKIE_CEP);
+                    $('#divModalCep').modal('hide');
+                }
+               
+            });
+ 
+            */
+            // ********** FIM - TRATAMENTO DO CEP DO COOKIE ********************************** 
+
+            RedirecionarLogin();
+            CarregarDadosTela();
+
+            if (USUARIO_TOKEN == "") {
+                $("#btnConcluir").addClass("hidden");
+                $("#divConcluirSemItens").removeClass("hidden");
+            }
+            else
+                CarregarDadosCarrinhoTopo();
+
+            $.cookieBar(
+                {
+                    message: 'Este site usa cookies, para melhorar a sua experiência na navegação',
+                    acceptButton: true,
+                    acceptText: 'Entendi',
+                    acceptFunction: null,
+                    declineButton: false,
+                    declineText: 'Disable Cookies',
+                    declineFunction: null,
+                    policyButton: false,
+                    policyText: 'Privacy Policy',
+                    policyURL: '/privacy-policy/',
+                    autoEnable: true,
+                    acceptOnContinue: false,
+                    acceptOnScroll: false,
+                    acceptAnyClick: false,
+                    expireDays: 7,
+                    renewOnVisit: false,
+                    forceShow: false,
+                    effect: 'slide',
+                    element: 'body',
+                    append: false,
+                    fixed: false,
+                    bottom: true
+
+                });
+
+            var listaCategoria = ListarCategoria();
+
+            if (listaCategoria != null && listaCategoria != undefined) {
+
+                var categorias = [];
+
+                try{
+                     //Se tiver logado, vamos mostrar primeiro as que estão no storage dele
+                    if (USUARIO_TOKEN == null || USUARIO_TOKEN == "")
+                        categorias = [];
+                    else
+                        categorias = USUARIO_CATEGORIAS.split(',');
+                }
+                catch(e){
+                }
+               
+
+                var categoriaCliente = [];
+                var categoriaNaoCliente = [];
+
+                $.each(listaCategoria, function () {
+
+                    var selecionado = jQuery.inArray(this.IdCategoria, categorias)
+
+                    if (selecionado >= 0 || (USUARIO_TOKEN == null || USUARIO_TOKEN == "")) {
+                        var titulo = this.Titulo + " " + selecionado;
+                        var idCategoria = this.IdCategoria;
+                        
+                        categoriaCliente.push("<li><a href='/produto/pesquisa?nome=" + titulo + "&idCategoria=" + idCategoria + "'>" + this.Titulo + "</a></li>");
+                    }
+                    else
+                        categoriaNaoCliente.push("<li><a href='/produto/pesquisa?nome=" + titulo + "&idCategoria=" + idCategoria + "'>" + this.Titulo + "</a></li>");
+
+
+                });
+
+                //lendo as categorias para adicionar no menu
+                $.each(categoriaCliente, function () {
+                    $("#divMenuCategoria").append(this);
+                });
+
+                //Por enquanto, não vamos mostrar as que ele não quer ver
+                
+            }
+
+            Js.Util.TratarEnterControle("txtPesquisa", "btnPesquisa")
+
+            $('#btnConcluir').css('z-index', 9999999999999);
+            $('.custom-menu').css('z-index', 10000000);
+            $('.shopping-cart').css('z-index', 10000003);
+
+            $('#lnkModuloVendas').attr('href', URL_MODULO_ADMIN);            
+
+            //
+            $("#btnConcluir").click(function () {
+                window.location.href = '/pedido/carrinho';
+            });
+
+        });
+
+        RedirecionarLogin = function (ignorarUrl) {
+
+            if (
+                (
+                    USUARIO_TOKEN == "" &&
+                    (window.location.href.indexOf('/cliente/dados') >= 0 ||
+                        window.location.href.indexOf('/pedido/carrinho') >= 0 ||
+                        window.location.href.indexOf('/pedido/esqueci-senha') >= 0 ||
+                        window.location.href.indexOf('/cliente/pedidos') >= 0
+                    )
+                ) || ignorarUrl
+            ) {
+
+                window.location.href = "/cliente/login";
+                event.stopImmediatePropagation();
+            }
+        }
+
+        CarregarDadosCarrinhoTopo = function () {
+            CARRINHO = ObterCarrinhoServico();
+            var qtCarrinho = 0;
+            var valorTotalCarrinho = 0;
+            $(".shopping-cart-list").html("");
+            //Obtendo Carrinho
+            if (CARRINHO.Itens != undefined && CARRINHO.Itens != null) {
+
+                $.each(CARRINHO.Itens, function () {
+
+                    var urlProduto = "/produto/detalhe?idProduto=" + this.IdProduto;
+                    //se der erro na imagem 1
+                    let imagemPrincipal = URL_SERVICO + "/" + this.CaminhoImagemPrincipal.toLowerCase().replace(".jpg", "_M.jpg");
+
+                    let produto = `
+                                    <div class="product product-widget">
+                                    <div class="product-thumb">
+                                        <img src="${imagemPrincipal}" alt="" >
+                                    </div>
+                                    <div class="product-body">
+                                        <h3 class="product-price">${Js.Util.FormatarValorBrasil(this.ValorTotal, true)} <span class="qty">x${this.Qt}</span></h3>
+                                        <h2 class="product-name"><a href="${urlProduto}">${this.Titulo}</a></h2>
+                                    </div>
+                                    <button class="cancel-btn" id='btn_${this.IdProduto}' data-id-produto='${this.IdProduto}' style='z-index:10000044'><i class="fa fa-trash"></i></button>
+                                </div>
+                                        `
+                    $(".shopping-cart-list").append(produto);
+                    qtCarrinho++;
+
+                    valorTotalCarrinho = parseFloat(parseFloat(valorTotalCarrinho) + parseFloat(this.ValorTotal));
+                });
+                $("#btnConcluir").removeClass("hidden");
+                $("#divConcluirSemItens").addClass("hidden");
+
+            }
+            else {
+                $("#btnConcluir").addClass("hidden");
+                $("#divConcluirSemItens").removeClass("hidden");
+            }
+
+            $("#lblQtCarrinhoTopo").html(qtCarrinho);
+            $("#lblValorCarrinhoTopo").html(Js.Util.FormatarValorBrasil(valorTotalCarrinho, true));
+
+            $(".cancel-btn").click(function (event) {
+                ExcluirCarrinho($(this).data('id-produto'));
+                event.stopImmediatePropagation();
+            });
+
+        }
+
+
+        CarregarDadosTela = function () {
+
+            //CLIENTE AUTENTICADO
+            if (USUARIO_TOKEN != null && USUARIO_TOKEN != "") {
+
+                const arrayNome = USUARIO_NOME.split(" ");
+                let primeiroNome = arrayNome[0];
+
+                $("#liLogin").addClass("hidden");
+                $("#liCriarConta").addClass("hidden");
+                $("#divCliente").removeClass("hidden");
+                $("#lblNomeCliente").html(primeiroNome);
+                $("#liSair").removeClass("hidden");
+                $("#liAlterarSenha").removeClass("hidden");
+                $("#liModuloVendas").removeClass("hidden");
+                
+
+                $("#divNaoCliente").addClass("hidden");
+                $("#liDirecionados").removeClass("hidden");
+
+                $("#liMeusDados").removeClass("hidden");
+                $("#liMeusPedidos").removeClass("hidden");
+
+
+            }
+            else {
+                $("#liSair").addClass("hidden");
+                $("#liMeusDados").addClass("hidden");
+                $("#liMeusPedidos").addClass("hidden");
+
+            }
+
+
+        }
+
+        ListarProduto = function (objeto, tipoPesquisa, valorAtributo, queryAdicional) {
+
+            var query = "";
+            var rotaAdicionalProduto = "";
+
+            if (tipoPesquisa == "promocao") {
+                query = "?promocao=true"
+            }
+            else if (tipoPesquisa == "lancamento")
+                query = "?lancamento=true"
+            else if (tipoPesquisa == "pesquisa"){
+                query = "?titulo=" + valorAtributo;
+                rotaAdicionalProduto =  "/ativos"
+            }
+            else if (tipoPesquisa == "categoria"){
+                query = "?idCategoria=" + valorAtributo;
+                rotaAdicionalProduto =  "/ativos"
+            }
+            else if (tipoPesquisa == "recentes")
+                query = "?recentes=true";
+            else if (tipoPesquisa == "direcionados")
+                query = "?direcionados=true";
+
+            //Se for pesquisa ou clique na categoria, vamos acessar a rota /produtos/ativos
+            url = URL_SERVICO + 'produtos' + rotaAdicionalProduto + query;
+
+            if (queryAdicional != undefined && queryAdicional != "")
+                url += queryAdicional;
+
+            listaRetorno = {};
+
+            Js.Util.Get(url,
+                null,
+                function (response) { //OnSucess
+
+                    if (response.Valido) {
+
+                        if (response.Dados != null && response.Dados != undefined) {
+
+                            var listaPromocao = response.Dados;
+                            var totalRegistros = response.TotalRegistros;
+
+                            if (listaPromocao != null && listaPromocao != undefined && listaPromocao != "") {
+
+                                var contador = 1;
+                                $.each(listaPromocao, function () {
+
+                                    var titulo = this.Titulo;
+                                    var idCategoria = this.IdCategoria;
+                                    var urlProduto = "/produto/detalhe?idProduto=" + this.IdProduto;
+                                    //se der erro na imagem 1
+                                    let imagemPrincipal;
+                                    //try {
+                                    imagemPrincipal = URL_SERVICO + "/" + this.Imagens[0].Caminho + "/" + this.Imagens[0].Nome.toLowerCase().replace(".jpg", "_M.jpg");
+                                    //}
+                                    //catch (e) {
+                                    //    imagemPrincipal = URL_SERVICO + "/" + this.Imagens[0].Caminho + "/" + this.Imagens[0].Nome.toLowerCase().replace(".jpg", "_M.jpg");
+                                    //}
+
+                                    var produto = ` <div class="col-md-3 col-sm-6 col-xs-6 col-lg-3 id="div${this.IdProduto}" style="cursor:pointer" onClick="javascript:window.location.href = '${urlProduto}'">
+                                                                                <div class="product product-single">
+                                                                                    <div class="product-thumb" >
+                                                                                        <div class="product-label">`;
+
+
+                                    produto += this.ProdutoPromocao ? "<span>Promoção</span>" : "";
+                                    produto += this.ProdutoLancamento && this.ProdutoPromocao != true ? "<span>Lançamento</span>" : "";
+                                   
+                                    var valor = (!isNaN(this.ValorVenda) ? Js.Util.FormatarValorBrasil(this.ValorVenda, true) : "Cadastre-se");
+
+
+                                    if (valor == 'R$ 0,00') {
+                                        valor = "Cadastre-se";
+                                    }
+
+                                    var qt = 0;
+                                    produto += `
+                                                </div>
+                                                    <img src="${imagemPrincipal}" alt=""  >
+                                                        </div>
+                                                    <div class="product-body">
+                                                        <h3 class="product-price">${valor}</h3>
+                                                        <h2 class="product-name"><a href="${urlProduto}">${this.Titulo}</a></h2>
+                                                        <div class="product-btns">`;
+
+
+                                     if(parseInt(this.Estoque)>0)
+                                        produto += `                       <button class="primary-btn add-to-cart" style='z-index:1111111' onClick="AdicionarCarrinho('${this.IdProduto}', ${qt}, '${this.IdCliente}');return false;"><i class="fa fa-shopping-cart"></i> Adicionar</button>`;
+
+                                     else
+                                        produto += `                       <button  disabled=disabled onClick="return false;" class="savoia-botao-Indisponivel"><i class="fa fa-exclamation-triangle"></i> Indisponivel</button>`;
+
+                                    produto += `                   </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                               `;
+
+
+                                    if (contador == 2 && (tipoPesquisa == "pesquisa" || tipoPesquisa == "categoria")) {
+                                        produto += "<div class='clearfix visible-sm visible-xs'></div>";
+                                        contador = 1;
+                                    }
+                                    else
+                                        contador++;
+
+
+                                    $("#" + objeto).append(produto);
+
+                                });
+
+                                //$(".add-to-cart").click(function (item) {
+                                //    var idProduto = $(this).data('id-produto');
+                                //    AdicionarCarrinho(idProduto);
+                                //});
+
+                                //Controlando páginação da tela de pesquisa
+                                if (tipoPesquisa == "pesquisa" || tipoPesquisa == "categoria") {
+
+                                    //$("#divPaginacao").append('<li class="active">1</li>');
+                                    //$("#divPaginacao").append('<li><a onclick="javascript:TrocarFiltro(2)">2</a></li>');
+                                    //$("#divPaginacao").append('<li><a onclick="javascript:TrocarFiltro(3)">3</a></li>');
+                                    //$("#divPaginacao").append('<li><a onclick="javascript:TrocarFiltro(4)"><i class="fa fa-caret-right"></i></a></li>');
+
+                                    var qtRegistrosPagina = $("#cboQtPaginas").val()
+
+                                    if (tipoPesquisa == "categoria")
+                                        $("#lblProdutoPesquisado").html(getUrlParameter('nome'));
+                                    else
+                                        $("#lblProdutoPesquisado").html(valorAtributo);
+
+                                    var numeropaginas = parseInt(totalRegistros / qtRegistrosPagina);
+                                    var paginaAtual = 1;
+
+                                    if (Js.Util.QueryString('paginaAtual') != "")
+                                        paginaAtual = parseInt(Js.Util.QueryString('paginaAtual'));
+
+                                    if (numeropaginas == 0)
+                                        $("#divPaginacao").append('<li class="active">1</li>');
+                                    else {
+                                        for (a = 0; a < numeropaginas; a++) {
+
+                                            var pagina = parseInt(a + 1);
+
+                                            if (pagina >= parseInt(paginaAtual - 2) &&
+                                                pagina <= parseInt(paginaAtual + 2)) {
+
+                                                if (pagina == paginaAtual)
+                                                    $("#divPaginacao").append('<li class="active">' + pagina + '</li>');
+                                                else
+                                                    $("#divPaginacao").append('<li><a href="#" onclick="TrocarFiltro(' + pagina + ')">' + pagina + '</a></li>');
+
+                                            }
+
+                                        }
+                                    }
+
+                                }
+
+                            }
+                            else {
+                                $("#" + objeto).append("<center><p>Não foram encontrados registros</p></center>");
+
+                                if ((tipoPesquisa == "pesquisa" || tipoPesquisa == "categoria")) {
+                                    $("#divFiltros").addClass("hidden");
+                                    $("#pResultadoPor").addClass("hidden");
+
+                                }
+                            }
+                        }
+                    }
+                    //é chamado da home
+                    if (tipoPesquisa == "promocao" || tipoPesquisa == "recentes") {
+                          // PRODUCTS SLICK
+                            $('#divProdutoPromocao').slick({
+                                slidesToShow: 4,
+                                slidesToScroll: 4,
+                                autoplay: true,
+                                infinite: true,
+                                speed: 300,
+                                dots: true,
+                                arrows: false,
+                                appendDots: '.product-slick-dots-1',
+                                responsive: [{
+                                    breakpoint: 991,
+                                    settings: {
+                                        slidesToShow: 1,
+                                        slidesToScroll: 1,
+                                    }
+                                },
+                                {
+                                    breakpoint: 480,
+                                    settings: {
+                                        dots: false,
+                                        arrows: true,
+                                        slidesToShow: 1,
+                                        slidesToScroll: 1,
+                                    }
+                                },
+                                ]
+                            });
+                    }
+
+                },
+                function (xhr, ajaxOptions, thrownError) { //OnError
+
+                    if (xhr.status == 400 || xhr.status == 500) {
+
+                        var mensagem = "";
+
+                        var data = JSON.parse(xhr.responseText);
+
+                        $.each(data.Mensagens, function () {
+
+                            if (this.Campo == null)
+                                mensagem += this.Mensagem + "\n";
+
+                        });
+
+                        if (mensagem != "")
+                            Js.Util.Janela.MostrarMensagemErro(mensagem);
+
+                    }
+                    else
+                        Js.Util.Janela.MostrarMensagemErro(mensagem);
+                },
+                true,
+                function (request) {
+                    request.setRequestHeader("authorization", "Bearer " +  USUARIO_TOKEN);
+                    request.setRequestHeader("External", "true");
+                });
+
+        }
+
+        
+        ObterCarrinhoServico = function () {
+
+            url = URL_SERVICO + 'pedidos/carrinho';
+            listaRetorno = {};
+
+            Js.Util.Get(url,
+                null,
+                function (response) { //OnSucess
+
+                    if (response.Valido) {
+
+                        if (response.Dados != null && response.Dados != undefined) {
+                            listaRetorno = response.Dados;
+
+                            //console.log('carregando o carrinho do topo');
+                            //console.log(listaRetorno);
+                        }
+                    }
+                },
+                function (xhr, ajaxOptions, thrownError) { //OnError
+
+                    if (xhr.status == 400 || xhr.status == 500) {
+
+                        var mensagem = "";
+
+                        var data = JSON.parse(xhr.responseText);
+
+                        $.each(data.Mensagens, function () {
+
+                            if (this.Campo == null)
+                                mensagem += this.Mensagem + "\n";
+
+                        });
+
+                        if (mensagem != "")
+                            Js.Util.Janela.MostrarMensagemErro(mensagem);
+
+                    }
+                    else if (xhr.status == 401) {
+
+                        LimparStorage();
+
+                    }
+                    else
+                        Js.Util.Janela.MostrarMensagemErro(mensagem);
+                },
+                false,
+                function (request) {
+                    request.setRequestHeader("authorization", "Bearer " +  USUARIO_TOKEN);
+                    request.setRequestHeader("sessao", USUARIO_SESSAO);
+                    request.setRequestHeader("External", "true");
+                });
+
+            return listaRetorno;
+        }
+
+        AdicionarCarrinho = function (idProduto, qt, idCliente) {
+            AtualizarCarrinho(idProduto, qt, false, idCliente);
+            event.stopImmediatePropagation();
+        }
+
+        AtualizarCarrinho = function (idProduto, qt, atualizar, idCliente) {
+
+            if (qt == undefined || qt == "" || qt == 0)
+                qt = 1;
+
+            if (atualizar == undefined || atualizar == null)
+                atualizar = false;
+
+            ConsumirServico
+                ("POST",
+                    URL_SERVICO + "pedidos/carrinho/itens",
+                    {
+                        "Itens": [
+                            {
+                                "IdProduto": idProduto,
+                                "Qt": qt,
+                                "IdCliente" : idCliente
+                            }
+                        ],
+
+                        "AtualizacaoDosItens": atualizar
+
+                    }
+                    ,
+                    function (response) { //OnSucess
+
+                        if (response != null && response.Valido) {
+
+                            //Carregando novamente o carrinho do topo
+                            CarregarDadosCarrinhoTopo();
+
+                        }
+
+                    },
+                    function (xhr, ajaxOptions, thrownError) { //OnError
+
+                        if (xhr.status == 400 || xhr.status == 500) {
+
+                            var mensagem = "";
+
+                            var data = JSON.parse(xhr.responseText);
+
+                            $.each(data.Mensagens, function () {
+
+                                if (this.Campo == null)
+                                    mensagem += this.Mensagem + "\n";
+
+                            });
+
+                            if (mensagem != "")
+                                Js.Util.Janela.MostrarMensagemErro(mensagem);
+
+                        }
+                        else if (xhr.status == 401) {
+                            LimparStorage();
+                            RedirecionarLogin();
+                        }
+                        else
+                            Js.Util.Janela.MostrarMensagemErro(mensagem);
+                    },
+                    false,
+                    function (request) {
+                        request.setRequestHeader("authorization", "Bearer " +  USUARIO_TOKEN);
+                        request.setRequestHeader("sessao", USUARIO_SESSAO);
+                        request.setRequestHeader("External", "true");
+                    });
+
+        }
+
+        ExcluirCarrinho = function (idProduto, funcaoPostExclusao) {
+
+            ConsumirServico
+                ("DELETE",
+                    URL_SERVICO + "pedidos/carrinho/" + idProduto,
+                    null
+                    ,
+                    function (response) { //OnSucess
+
+                        if (response != null && response.Valido) {
+
+
+                            var pagina = window.location.href;
+                            if(pagina.indexOf('/pedido/carrinho') != -1 || pagina.indexOf('/pedido/pagamento') != -1)
+                            {
+                                window.location.reload();
+                            }
+
+                            //Carregando novamente o carrinho do topo
+                            CarregarDadosCarrinhoTopo();
+
+                            if (funcaoPostExclusao != undefined)
+                                $(setTimeout(funcaoPostExclusao, 100));
+
+                        }
+
+                    },
+                    function (xhr, ajaxOptions, thrownError) { //OnError
+
+                        if (xhr.status == 400 || xhr.status == 500) {
+
+                            var mensagem = "";
+
+                            var data = JSON.parse(xhr.responseText);
+
+                            $.each(data.Mensagens, function () {
+
+                                if (this.Campo == null)
+                                    mensagem += this.Mensagem + "\n";
+
+                            });
+
+                            if (mensagem != "")
+                                Js.Util.Janela.MostrarMensagemErro(mensagem);
+
+                        }
+                        else if (xhr.status == 401) {
+                            LimparStorage();
+                            RedirecionarLogin();
+                        }
+                        else
+                            Js.Util.Janela.MostrarMensagemErro(mensagem);
+                    },
+                    true,
+                    function (request) {
+                        request.setRequestHeader("authorization", "Bearer " +  USUARIO_TOKEN);
+                        request.setRequestHeader("sessao", USUARIO_SESSAO);
+                        request.setRequestHeader("External", "true");
+                    });
+
+        }
+
+        ListarCategoria = function () {
+
+            url = URL_SERVICO + 'categorias?ativo=true';
+            listaRetorno = {};
+
+            Js.Util.Get(url,
+                null,
+                function (response) { //OnSucess
+
+                    if (response.Valido) {
+
+                        if (response.Dados != null && response.Dados != undefined) {
+                            listaRetorno = response.Dados;
+                        }
+                    }
+                },
+                function (xhr, ajaxOptions, thrownError) { //OnError
+
+                    if (xhr.status == 400 || xhr.status == 500) {
+
+                        var mensagem = "";
+
+                        var data = JSON.parse(xhr.responseText);
+
+                        $.each(data.Mensagens, function () {
+
+                            if (this.Campo == null)
+                                mensagem += this.Mensagem + "\n";
+
+                        });
+
+                        if (mensagem != "")
+                            Js.Util.Janela.MostrarMensagemErro(mensagem);
+
+                    }
+                    else
+                        Js.Util.Janela.MostrarMensagemErro(mensagem);
+                },
+                false,
+                function (request) {
+                    request.setRequestHeader("authorization", "Bearer " +  USUARIO_TOKEN);
+                    request.setRequestHeader("External", "true");
+                });
+
+            return listaRetorno;
+
+        }
+
+    </script>
+    <!-- jQuery Plugins -->
+    <script src="/js/bootstrap.min.js"></script>
+    <script src="/js/slick.min.js"></script>
+    <script src="/js/nouislider.min.js"></script>
+    <script src="/js/jquery.zoom.min.js"></script>
+
+</head>
+<body>
+    <!-- HEADER -->
+    <header>
+        <!-- header -->
+        <div id="header">
+            <div class="container">
+                <div class="pull-left">
+                    <!-- Logo -->
+                    <div class="header-logo">
+                        <a class="logo" href="#">
+                            <img src="~/img/desencalha/logo-de.png" asp-append-version="true" alt="" onclick="window.location='/'">
+                        </a>
+                    </div>
+                    <!-- /Logo -->
+                    <!-- Search -->
+                    <div class="header-search">
+                        <form action="/produto/pesquisa" method="get">
+                            <input class="input search-input" type="text" placeholder="Digite o nome do produto" style="width:400px" id="nome" name="nome">
+                            <button class="search-btn"><i class="fa fa-search" id="btnPesquisar"></i></button>
+                        </form>
+                    </div>
+                    <!-- /Search -->
+                </div>
+                <div class="pull-right">
+                    <ul class="header-btns">
+                        <!-- Account -->
+                        <li class="header-account dropdown default-dropdown">
+                            <div class="dropdown-toggle" role="button" data-toggle="dropdown" aria-expanded="true">
+                                <div class="header-btns-icon">
+                                    <i class="fa fa-user-o"></i>
+                                </div>
+                                <strong class="text-uppercase">Minha Conta<i class="fa fa-caret-down"></i></strong>
+                            </div>
+                            <div id="divNaoCliente">
+                                <a href="/cliente/login" class="text-uppercase">Entrar</a> / <a href="/cliente/novo" class="text-uppercase">Criar</a>
+                                
+                            </div>
+
+                            <div id="divCliente" class="hidden"> <label class="text-uppercase text-info" id="lblNomeCliente"></label>
+                             
+
+                            </div>
+                            <div id="divClienteCEP" class="text-right" style="visibility:hidden"><B>CEP: </B><span id="divClienteCEPvalor"></span>&nbsp;</div>
+
+                            <ul class="custom-menu">
+                                <li id="liMeusDados"><a href="/cliente/dados"><i class="fa fa-user-o"></i> Meus Dados</a></li>
+                                <li id="liMeusPedidos"><a href="/cliente/pedidos"><i class="fa fa-list"></i> Meus Pedidos</a></li>
+                                <li id="liAlterarSenha" class="hidden"><a href="/cliente/alterar-senha"><i class="fa fa-exchange"></i> Alterar Senha</a></li>
+                                <li id="liModuloVendas" class="hidden"><a id="lnkModuloVendas" target="_blank"><i class="fa fa-money"></i> Módulo de Vendas</a></li>
+                                <li id="liLogin"><a href="/cliente/login"><i class="fa fa-unlock-alt"></i> Login</a></li>
+                                <li id="liCriarConta"><a href="/cliente/novo"><i class="fa fa-user-plus"></i>Criar uma Conta</a></li>
+                                <li id="liSair"><a href="/cliente/login?sair=true"><i class="fa fa-sign-out"></i> Sair</a></li>
+                            </ul>
+                        </li>
+                        <!-- /Account -->
+                        <!-- Cart -->
+                        <li class="header-cart dropdown default-dropdown">
+                            <a class="dropdown-toggle" data-toggle="dropdown" aria-expanded="true">
+                                <div class="header-btns-icon">
+                                    <i class="fa fa-shopping-cart"></i>
+                                    <span class="qty" id="lblQtCarrinhoTopo">0</span>
+                                </div>
+                                <strong class="text-uppercase">Carrinho:</strong>
+                                <br>
+                                <span id="lblValorCarrinhoTopo">R$ 0,00</span>
+                            </a>
+                            <div class="custom-menu">
+                                <div id="shopping-cart">
+                                    <div class="shopping-cart-list">
+
+                                    </div>
+
+                                    <div class="shopping-cart-btns" id="divConcluir">
+                                        <!--button class="main-btn">Carrinho</!--button>-->
+                                        <div id="divConcluirSemItens">Não existem itens no carrinho</div>
+                                        <button class="primary-btn" id="btnConcluir" >Concluir <i class="fa fa-arrow-circle-right"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+                        <!-- /Cart -->
+                        <!-- Mobile nav toggle-->
+                        <li class="nav-toggle">
+                            <button class="nav-toggle-btn main-btn icon-btn"><i class="fa fa-bars"></i></button>
+                        </li>
+                        <!-- / Mobile nav toggle -->
+                    </ul>
+                </div>
+            </div>
+            <!-- header -->
+        </div>
+        <!-- container -->
+    </header>
+    <!-- /HEADER -->
+    <!-- NAVIGATION -->
+    <div id="navigation">
+        <!-- container -->
+        <div class="container">
+            <div id="responsive-nav">
+                <!-- category nav -->
+                <div class="category-nav @(Context.Request.Path.Value.IndexOf("produto/pesquisa")>0 ? "" : "show-on-click")" id="divNavigationPrincipal">
+                    <span class="category-header">Categorias <i class="fa fa-list"></i></span>
+                    <ul class="category-list" id="divMenuCategoria">
+                        @*<li><a href="#">Men’s Clothing</a></li>
+                            <li><a href="#">Computer & Office</a></li>
+                            <li><a href="#">Consumer Electronics</a></li>*@
+                    </ul>
+                </div>
+                <!-- /category nav -->
+                <!-- menu nav -->
+                <div class="menu-nav">
+                    <span class="menu-header">Menu <i class="fa fa-bars"></i></span>
+                    <ul class="menu-list">
+                        <li id="liDirecionados" class="hidden"><a href="/produto/direcionados" style="color:yellow">Para Você &nbsp;<i class="fa fa-cart-plus"></i></a></li>
+                        <li><a href="/empresa/quem-somos">Quem somos</a></li>
+                        <li><a href="/empresa/missao-e-valores">Missão, Visão e Valores</a></li>
+                        <li><a href="/empresa/fale-conosco">Fale Conosco</a></li>
+                        <li><a href="/empresa/localizacao">Localização</a></li>
+
+                    </ul>
+                </div>
+                <!-- menu nav -->
+            </div>
+        </div>
+        <!-- /container -->
+    </div>
+    <!-- /NAVIGATION -->
+    <!-- BREADCRUMB -->
+    @RenderSection("breadCrumb", required: false)
+    <!-- /BREADCRUMB -->
+
+    @RenderBody()
+
+    <!-- /NAVIGATION -->
+    <!-- FOOTER -->
+    <footer id="footer" class="section section-grey">
+        <!-- container -->
+        <div class="container">
+            <!-- row -->
+            <div class="row">
+                <!-- footer widget -->
+                <div class="col-md-3 col-sm-6 col-xs-6">
+                    <div class="footer">
+                        <!-- footer logo -->
+                        <div class="footer-logo">
+                            <a class="logo" href="#">
+                                <img src="/img/desencalha/logo-de-rodape.png" alt="">
+                            </a>
+                        </div>
+                        <!-- /footer logo -->
+
+                        <p><center>Onde seu negócio não fica parado.</center></p>
+
+                        <!-- footer social -->
+                        <ul class="footer-social hidden">
+                            <li><a href="#"><i class="fa fa-facebook"></i></a></li>
+                            <li><a href="#"><i class="fa fa-twitter"></i></a></li>
+                            <li><a href="#"><i class="fa fa-instagram"></i></a></li>
+                            <li><a href="#"><i class="fa fa-google-plus"></i></a></li>
+                            <li><a href="#"><i class="fa fa-pinterest"></i></a></li>
+                        </ul>
+                        <!-- /footer social -->
+                    </div>
+                </div>
+                <!-- /footer widget -->
+                <!-- footer widget -->
+                <div class="col-md-3 col-sm-6 col-xs-6">
+                    <div class="footer">
+                        <h3 class="footer-header">Minha conta</h3>
+                        <ul class="list-links">
+                            <li><a href="/cliente/dados">Meus dados</a></li>
+                            <li><a href="/cliente/pedidos">Meus pedidos</a></li>
+                            <li><a href="/cliente/novo">Criar uma nova conta</a></li>
+                            <li><a href="/cliente/esqueci-senha">Esqueci minha senha</a></li>
+                            <li><a href="/cliente/alterar-senha">Alterar minha senha</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <!-- /footer widget -->
+
+                <div class="clearfix visible-sm visible-xs"></div>
+
+
+
+
+                <!-- footer widget -->
+                <div class="col-md-3 col-sm-6 col-xs-6">
+                    <div class="footer">
+                        <h3 class="footer-header">Empresa</h3>
+                        <ul class="list-links">
+                            <li><a href="/empresa/quem-somos">Quem somos</a></li>
+                            <li><a href="/empresa/missao-e-valores">Missão e Valores</a></li>
+
+                            <li><a href="/empresa/localizacao">Localização</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <!-- /footer widget -->
+                <!-- footer widget -->
+                <div class="col-md-3 col-sm-6 col-xs-6">
+                    <div class="footer">
+                        <h3 class="footer-header">Atendimento</h3>
+                        <ul class="list-links">
+                            <li><a href="/empresa/fale-conosco">Fale Conosco</a></li>
+                            <li><a href="/empresa/troca-e-devolucao">Troca e Devolução</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <!-- /footer widget -->
+                <!-- footer subscribe -->
+                <div class="col-md-3 col-sm-6 col-xs-6 hidden">
+                    <div class="footer">
+                        <h3 class="footer-header">Stay Connected</h3>
+                        <p>Cosméticos e acessórios no geral</p>
+                        <form>
+                            <div class="form-group">
+                                <input class="input" placeholder="Enter Email Address">
+                            </div>
+                            <button class="primary-btn">Join Newslatter</button>
+                        </form>
+                    </div>
+                </div>
+                <!-- /footer subscribe -->
+            </div>
+            <!-- /row -->
+            <hr>
+            <!-- row -->
+            <div class="row">
+                <div class="col-md-8 col-md-offset-2 text-center">
+                    <!-- footer copyright -->
+                    <div class="footer-copyright">
+                        <!-- Link back to Colorlib can't be removed. Template is licensed under CC BY 3.0. -->
+                        Copyright &copy;
+                        <script>document.write(new Date().getFullYear());</script> Todos os direitos reservados
+                        <!-- Link back to Colorlib can't be removed. Template is licensed under CC BY 3.0. -->
+                    </div>
+                    <!-- /footer copyright -->
+                </div>
+            </div>
+            <!-- /row -->
+        </div>
+        <!-- /container -->
+    </footer>
+    <!-- /FOOTER -->
+
+    <div class="modal-aguarde"></div>
+
+    <div class="box-cookies hide">
+        <p class="msg-cookies">Este site usa cookies para garantir que você obtenha a melhor experiência.</p>
+        <button class="btn-cookies">Aceitar!</button>
+    </div>
+
+    <div class="modal fade" id="divModalCep" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            <h4 class="modal-title" id="exampleModalLabel">Informe o seu CEP</h4>
+          </div>
+          <div class="modal-body">
+            <form>
+              <div class="form-group ">
+                 <label class="col-sm-3 control-label">Digite o CEP:</label>
+                    <div class="col-sm-4">
+                     <form id="frmCepUsuario">
+                      <input type="text" class="form-control savoia-campo-cep " id="txtCepUsuario" name="txtCepUsuario" >
+                      
+                      </form>
+                    </div>
+                     <div class="col-sm-2">
+                          <button type="button" class="btn primary-btn"  id="btnCepUsuarioConfirmar">Confirmar</button>
+                    </div>
+              </div>
+                  <div class="form-group">  <BR /></div>
+              <div class="form-group">
+                 <BR />
+               
+                 <label class="col-sm-12"><a href="cliente/login">Entre com o seu login para melhorar sua experiência :-)</a></label> 
+                  
+              </div> 
+                 <div class="form-group"><BR /></div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn main-btn" data-dismiss="modal">Fechar</button>
+ 
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="/js/main.js"></script>
+
+</body>
+
+</html>
+ 

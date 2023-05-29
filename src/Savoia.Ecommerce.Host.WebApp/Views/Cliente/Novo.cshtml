@@ -1,0 +1,493 @@
+﻿@{
+    Layout = "_LayoutPesquisa";
+}
+
+@section breadCrumb {
+    <div id="breadcrumb">
+        <div class="container">
+            <ul class="breadcrumb">
+                <li><a href="/">Home</a></li>
+                <li>Cliente</li>
+                <li class="active">Novo Cliente</li>
+            </ul>
+        </div>
+    </div>
+}
+<script>
+
+    $(document).ready(function () {
+
+        Js.Util.TratarEnterForm("checkout-form", "btnEntrar");
+
+        CarregarEstado(URL_SISTEMA_COMERCIAL, $("#EnderecoCobranca_Estado_CodEstado"));
+        CarregarEstado(URL_SISTEMA_COMERCIAL, $("#EnderecoEntrega_Estado_CodEstado"));
+
+
+        //Combo Estado - Cobranca
+        $("#EnderecoCobranca_Estado_CodEstado").change(function (e) {
+            var id = $(this).val();
+
+            $('#EnderecoCobranca_Estado_Cidade_CodCidade').val("");
+            $('#EnderecoCobranca_Estado_Cidade_DescCidade').val("");
+
+            CarregarCidade(URL_SISTEMA_COMERCIAL, id, 'EnderecoCobranca_Estado_Cidade_CodCidade', 'EnderecoCobranca_Estado_Cidade_DescCidade');
+
+        });
+
+        //Combo Estado - Entrega
+        $("#EnderecoEntrega_Estado_CodEstado").change(function (e) {
+            var id = $(this).val();
+
+            $('#EnderecoEntrega_Estado_Cidade_CodCidade').val("");
+            $('#EnderecoEntrega_Estado_Cidade_DescCidade').val("");
+
+            CarregarCidade(URL_SISTEMA_COMERCIAL, id, 'EnderecoEntrega_Estado_Cidade_CodCidade', 'EnderecoEntrega_Estado_Cidade_DescCidade');
+
+        });
+
+        //Campo email
+        $("#EmailPrincipal").blur(function () { $("#Login").val($("#EmailPrincipal").val()) });
+
+        $("#btnSalvar").click(
+            function () { Salvar() }
+        );
+
+        
+        ListarCategoria();
+        CarregarRamoAtividade(URL_SERVICO, $("#IdRamoAtividade"));
+
+    });
+
+
+    Salvar = function () {
+
+        $("#btnSalvar").hide();
+
+        if ($("#DataNascOuFundacao").val() != "")
+            dataNascOuFundacao = Js.Util.FormatarData(Js.Util.RetornarDataJs($("#DataNascOuFundacao").val()), 'isoDateTime');
+        else
+            dataNascOuFundacao = null;
+
+        LimparCampoValidacaoForm();
+
+        var categoriasSelecionadas = [];
+
+        $("[id*=chkCategoria]:checked").each(function () {
+
+            categoriasSelecionadas.push($(this).attr("idCategoria"));
+        });
+
+        ConsumirServico
+            ("POST",
+            URL_SERVICO + "clientes",
+            {
+                "Categorias" : categoriasSelecionadas,
+                "TipoPessoa": "PJ",
+                "NomeOuRazao": $("#NomeOuRazao").val(),
+                "ApelidoOuFantasia": $("#ApelidoOuFantasia").val(),
+                "IdRamoAtividade": $("#IdRamoAtividade").val(),
+                "DataNascOuFundacao": dataNascOuFundacao,
+                "CpfOuCnpj": $("#CpfOuCnpj").val(),
+                "RgOuInscricao": $("#RgOuInscricao").val(),
+                "EmailPrincipal": $("#EmailPrincipal").val(),
+                "EmailAlternativo": $("#EmailAlternativo").val(),
+                "Telefone1": $("#Telefone1").val(),
+                "Telefone2": $("#Telefone2").val(),
+                "Telefone3": $("#Telefone3").val(),
+                "Contato": $("#Contato").val(),
+                "Login": $("#Login").val(),
+                "Senha": $("#Senha").val(),
+                "SenhaConfirmar": $("#SenhaConfirmar").val(),
+                "EnderecoEntrega": {
+                    "Cidade": {
+                        "CodCidade": ($("#EnderecoEntrega_Estado_Cidade_CodCidade").val() == "" ? 0 : $("#EnderecoEntrega_Estado_Cidade_CodCidade").val()),
+                        "Estado": {
+                            "CodEstado": ($("#EnderecoEntrega_Estado_CodEstado").val() == "" ? 0 : $("#EnderecoEntrega_Estado_CodEstado").val()),
+                            "UF": $("#EnderecoEntrega_Estado_CodEstado option:selected").text()
+                        },
+                        "Titulo": $("#EnderecoEntrega_Estado_Cidade_DescCidade").val()
+                    },
+                    "Bairro": $("#EnderecoEntrega_Bairro").val(),
+                    "Endereco": $("#EnderecoEntrega_Endereco").val(),
+                    "Complemento": $("#EnderecoEntrega_Complemento").val(),
+                    "Cep": $("#EnderecoEntrega_Cep").val()
+                },
+                "EnderecoCobranca": {
+                    "Cidade": {
+                        "CodCidade": ($("#EnderecoCobranca_Estado_Cidade_CodCidade").val() == "" ? 0 : $("#EnderecoCobranca_Estado_Cidade_CodCidade").val()),
+                        "Estado": {
+                            "CodEstado": ($("#EnderecoCobranca_Estado_CodEstado").val() == "" ? 0 : $("#EnderecoCobranca_Estado_CodEstado").val()),
+                            "UF": $("#EnderecoCobranca_Estado_CodEstado option:selected").text()
+                        },
+                        "Titulo": $("#EnderecoCobranca_Estado_Cidade_DescCidade").val()
+                    },
+                    "Bairro": $("#EnderecoCobranca_Bairro").val(),
+                    "Endereco": $("#EnderecoCobranca_Endereco").val(),
+                    "Complemento": $("#EnderecoCobranca_Complemento").val(),
+                    "Cep": $("#EnderecoCobranca_Cep").val()
+                }
+            }
+            ,
+            function (response) { //OnSucess
+
+                if (response != null && response.Valido) {
+
+                    $("#divCadastro").addClass('hidden');
+                    $("#divConfirmacao").removeClass('hidden');
+                }
+
+
+            },
+            function (xhr, ajaxOptions, thrownError) { //OnError
+
+                var existeValidacaoCampo = false;
+
+                if (xhr.status == 400 || xhr.status == 500) {
+
+                    var data = JSON.parse(xhr.responseText);
+                    var mensagemGeral = "";
+
+                    TratarCampoValidacao(data.Mensagens);
+                    $("#lnkCobranca").click();
+
+                    if (
+                        (
+                        $("#EnderecoEntrega_Endereco").val() == "" ||
+                        $("#EnderecoEntrega_Bairro").val() == "" ||
+                        $("#EnderecoEntrega_Cep").val() == "" ||
+                        $("#EnderecoEntrega_Estado_CodEstado").val() == "" ||
+                        $("#EnderecoEntrega_Estado_Cidade_DescCidade").val()  == "" ||
+                        $("#EnderecoEntrega_Estado_Cidade_CodCidade").val()
+                        )
+                        && 
+                        (
+                        $("#EnderecoCobranca_Endereco").val() != "" &&
+                        $("#EnderecoCobranca_Bairro").val() != "" &&
+                        $("#EnderecoCobranca_Cep").val() != "" &&
+                        $("#EnderecoCobranca_Estado_CodEstado").val() != "" &&
+                        $("#EnderecoCobranca_Estado_Cidade_DescCidade").val()  != "" &&
+                        $("#EnderecoCobranca_Estado_Cidade_CodCidade").val()
+                        )
+                    )
+                    {
+                        //var aTag = $("a[name='Entrega']");
+                        //$('html,body').animate({ scrollTop: 10 }, 'slow');
+                        $("#lnkEntrega").click();
+                    }
+
+
+        //                    $("#EnderecoEntrega_Endereco").val($("#EnderecoCobranca_Endereco").val())
+        //$("#EnderecoEntrega_Complemento").val($("#EnderecoCobranca_Complemento").val())
+        //$("#EnderecoEntrega_Bairro").val($("#EnderecoCobranca_Bairro").val());
+        //$("#EnderecoEntrega_Cep").val($("#EnderecoCobranca_Cep").val());
+        //$("#EnderecoEntrega_Estado_CodEstado").val($("#EnderecoCobranca_Estado_CodEstado").val());
+        //$("#EnderecoEntrega_Estado_Cidade_DescCidade").val($("#EnderecoCobranca_Estado_Cidade_DescCidade").val());
+        //$("#EnderecoEntrega_Estado_Cidade_CodCidade").val($("#EnderecoCobranca_Estado_Cidade_CodCidade").val());
+                    
+                    
+                    $(window).scrollTop(0);
+
+                }
+                else
+                    TratarErro(xhr, ajaxOptions, thrownError);
+            },
+            true,
+            function (request) {
+                request.setRequestHeader("authorization", "Bearer " +  USUARIO_TOKEN);
+                request.setRequestHeader("External", "true");
+            });
+
+        $("#btnSalvar").show();
+
+    }
+
+    ListarCategoria = function () {
+
+        url = URL_SERVICO + 'categorias?ativo=true';
+        listaRetorno = {};
+
+        Js.Util.Get(url,
+            null,
+            function (response) { //OnSucess
+
+                if (response.Valido) {
+
+                    if (response.Dados != null && response.Dados != undefined) {
+                            
+                        //var tr = $("#tblCategoria").append('<tr />').children('tr');
+
+
+                        var i = 0;
+                        var linha = "";
+                        $.each(response.Dados, function () {
+
+                            if (i == 0 )
+                                linha += "<TD width='200' style='vertical-align: top'>"
+                            else
+                                linha += "";
+
+                            linha +=    "<input class='form-check-input' type='checkbox' id='chkCategoria_" + this.IdCategoria + "' value='"  + this.IdCategoria + "' idCategoria='" + this.IdCategoria + "'/>"
+                            linha +=    "          <label class='form-check-label' for='chkCategoria_" + this.IdCategoria + "'>" + this.Titulo + "</label><br>"
+                                        
+                            if(i==4)
+                                linha += "</td>"
+                                         
+                        i++;
+                                        
+                        if (i == 5) i = 0;
+                            });
+        
+                        if(i==4)
+                            linha += "</td>"
+       
+                        $("#tblCategoria").html("<TR>" + linha + "</tr>");
+                        //tr.append(linha);
+                    }
+                }
+            },
+            function (xhr, ajaxOptions, thrownError) { //OnError
+
+                if (xhr.status == 400 || xhr.status == 500) {
+
+                    var mensagem = "";
+
+                    var data = JSON.parse(xhr.responseText);
+
+                    $.each(data.Mensagens, function () {
+
+                        if (this.Campo == null)
+                            mensagem += this.Mensagem + "\n";
+
+                    });
+
+                    if (mensagem != "")
+                        Js.Util.Janela.MostrarMensagemErro(mensagem);
+
+                }
+                else
+                    Js.Util.Janela.MostrarMensagemErro(mensagem);
+            },
+            false,
+            function (request) {
+                request.setRequestHeader("authorization", "Bearer " +  USUARIO_TOKEN);
+                request.setRequestHeader("External", "true");
+            });
+
+        return listaRetorno;
+
+    }
+
+    CopiarEndereco = function () {
+        $("#EnderecoEntrega_Endereco").val($("#EnderecoCobranca_Endereco").val())
+        $("#EnderecoEntrega_Complemento").val($("#EnderecoCobranca_Complemento").val())
+        $("#EnderecoEntrega_Bairro").val($("#EnderecoCobranca_Bairro").val());
+        $("#EnderecoEntrega_Cep").val($("#EnderecoCobranca_Cep").val());
+        $("#EnderecoEntrega_Estado_CodEstado").val($("#EnderecoCobranca_Estado_CodEstado").val());
+        $("#EnderecoEntrega_Estado_Cidade_DescCidade").val($("#EnderecoCobranca_Estado_Cidade_DescCidade").val());
+        $("#EnderecoEntrega_Estado_Cidade_CodCidade").val($("#EnderecoCobranca_Estado_Cidade_CodCidade").val());
+    }
+</script>
+
+<div>
+    <!-- container -->
+    <div class="container">
+        <!-- row -->
+
+        <div class="row hidden" id="divConfirmacao">
+                <div class="col-md-12">
+                    <div class="billing-details"  style="min-height:200px;">
+                        <p>
+
+                            <center><h3 class="title">Cadastro realizado com sucesso. Em breve entraremos em contato!</h3></center>
+                            <div class="form-group">
+                                <div><br />
+                                    <center><button class="primary-btn" onclick="window.location.href='/'" type="button">Voltar</button></center>
+                                </div>
+                            </div>
+
+                        </p>
+                        <p></p>
+
+                    </div>
+                </div>
+        </div>
+
+        <div class="row" id="divCadastro">
+            <div class="col-md-6">
+                <div class="billing-details">
+                    <p>Já é cliente ? <a href="/cliente/login">Clique aqui para efetuar o login</a></p>
+                    <div class="section-title">
+                        <h3 class="title">Dados do cliente</h3>
+                    </div>
+                    <div class="alert alert-danger hidden" role="alert" id="divMensagem">
+
+                    </div>
+                    <div class="form-group">
+                        <input class="input" type="text" name="NomeOuRazao" id="NomeOuRazao" placeholder="Razão Social (*)" >
+                    </div>
+                    <div class="form-group">
+                        <input class="input" type="text" name="ApelidoOuFantasia" id="ApelidoOuFantasia" placeholder="Fantasia (*)">
+                    </div>
+                    <div class="form-group">
+                        <select class="form-control input" id="IdRamoAtividade" name="IdRamoAtividade" placeholder="Ramo de Atividade (*)"></select>
+                    </div>
+                    <div class="form-group">
+                        <input class="input savoia-campo-data" type="text" name="DataNascOuFundacao" id="DataNascOuFundacao" placeholder="Data Fundação (*)">
+                    </div>
+                    <div class="form-group">
+                        <input class="input savoia-campo-cnpj" type="text" name="CpfOuCnpj" id="CpfOuCnpj" placeholder="CNPJ (*)">
+                    </div>
+                    <div class="form-group ">
+                        <input class="input" type="text" name="RgOuInscricao" id="RgOuInscricao" placeholder="Inscrição Estadual">
+                    </div>
+                    <div class="form-group">
+                        <input class="input" type="email" name="EmailPrincipal" id="EmailPrincipal" placeholder="Email Principal (*)">
+                    </div>
+                    <div class="form-group">
+                        <input class="input" type="text" name="EmailAlternativo" id="EmailAlternativo" placeholder="Email Alternativo">
+                    </div>
+                    <div class="form-group">
+                        <input class="input savoia-campo-telefone" type="tel" name="Telefone1" id="Telefone1" placeholder="Telefone 1 (*)">
+                    </div>
+                    <div class="form-group">
+                        <input class="input savoia-campo-telefone" type="tel" name="Telefone2" id="Telefone2" placeholder="Telefone 2">
+                    </div>
+                    <div class="form-group">
+                        <input class="input" type="text" name="Contato" id="Contato" placeholder="Contato">
+                    </div>
+                </div>
+                <div class="billing-details">
+                    <div class="section-title">
+                        <h3 class="title">Endereços</h3>
+                    </div>
+                    <ul class="nav nav-tabs">
+                        <li class="active"><a data-toggle="tab" href="#Cobranca" id="lnkCobranca" >Cobrança</a></li>
+                        <li><a data-toggle="tab" href="#Entrega" id="lnkEntrega">Entrega</a></li>
+                    </ul>
+                    <div class="tab-content">
+                        <div id="Cobranca" class="tab-pane fade in active">
+                            <p>
+                                <div class="form-group">
+                                    <input class="input" type="text" name="EnderecoCobranca_Endereco" id="EnderecoCobranca_Endereco" placeholder="Endereço (*)">
+                                </div>
+                                <div class="form-group">
+                                    <input class="input" type="text" name="EnderecoCobranca_Complemento" id="EnderecoCobranca_Complemento" placeholder="Complemento">
+                                </div>
+                                <div class="form-group">
+                                    <input class="input" type="text" name="EnderecoCobranca_Bairro" id="EnderecoCobranca_Bairro" placeholder="Bairro (*)">
+                                </div>
+                                <div class="form-group">
+                                    <input class="input savoia-campo-cep" type="text" name="EnderecoCobranca_Cep" id="EnderecoCobranca_Cep" placeholder="Cep (*)">
+                                </div>
+                                <div class="form-inline">
+
+                                    <select style="width:30%" class="form-control input" name="EnderecoCobranca_Estado_CodEstado" id="EnderecoCobranca_Estado_CodEstado" placeholder="Estado (*)"></select>
+                                    <input style="width:69%" class="form-control input" type="text" name="EnderecoCobranca_Estado_Cidade_DescCidade" id="EnderecoCobranca_Estado_Cidade_DescCidade" autocomplete="new-password" placeholder="Digite o nome da Cidade (*) ">
+                                    <input id="EnderecoCobranca_Estado_Cidade_CodCidade" name="EnderecoCobranca_Estado_Cidade_CodCidade" type="hidden" />
+
+                                </div>
+
+                            </p>
+                        </div>
+                        <div id="Entrega" class="tab-pane fade">
+
+                            <p>
+                            <p><a onclick="javascript: CopiarEndereco();"><strong class="text-info">Copiar dados de cobrança?</strong></a></p>
+                            <div class="form-group">
+                                <input class="input" type="text" name="EnderecoEntrega_Endereco" id="EnderecoEntrega_Endereco" placeholder="Endereço (*)">
+                            </div>
+                            <div class="form-group">
+                                <input class="input" type="text" name="EnderecoEntrega_Complemento" id="EnderecoEntrega_Complemento" placeholder="Complemento">
+                            </div>
+                            <div class="form-group">
+                                <input class="input" type="text" name="EnderecoEntrega_Bairro" id="EnderecoEntrega_Bairro" placeholder="Bairro (*)">
+                            </div>
+                            <div class="form-group">
+                                <input class="input savoia-campo-cep" type="text" name="EnderecoEntrega_Cep" id="EnderecoEntrega_Cep" placeholder="Cep (*)">
+                            </div>
+
+                            <div class="form-inline">
+
+                                <select style="width:30%" class="form-control input" name="EnderecoEntrega_Estado_CodEstado" id="EnderecoEntrega_Estado_CodEstado" placeholder="Estado (*)"></select>
+                                <input style="width:69%" class="form-control input" type="text" name="EnderecoEntrega_Estado_Cidade_DescCidade" id="EnderecoEntrega_Estado_Cidade_DescCidade"  autocomplete="new-password"  placeholder="Digite o nome da Cidade (*)">
+                                <input id="EnderecoEntrega_Estado_Cidade_CodCidade" name="EnderecoEntrega_Estado_Cidade_CodCidade" type="hidden" />
+
+                            </div>
+
+                            </p>
+                        </div>
+                    </div>
+
+
+                </div>
+                <div class="billing-details">
+                    <p>&nbsp;</p>
+                    <div class="section-title">
+                        <h3 class="title">Categorias de interesse</h3>
+                    </div>
+                    <div class="form-group">
+                        <table id="tblCategoria" ></table>
+                    </div>
+                </div>
+                <div class="billing-details">
+                    <p>&nbsp;</p>
+                    <div class="section-title">
+                        <h3 class="title">Dados de acesso</h3>
+                    </div>
+                    <div class="form-group">
+                        <input class="input" type="text" name="Login" id="Login" placeholder="Login" readonly="readonly" style="background-color:whitesmoke" title="O seu login é o seu email Principal">
+                    </div>
+                    <div class="form-group">
+                        <input class="input" type="password" name="Senha" id="Senha" placeholder="Senha (*)">
+                    </div>
+                    <div class="form-group">
+                        <input class="input" type="password" name="SenhaConfirmar" id="SenhaConfirmar" placeholder="Confirmar Senha (*)">
+                    </div>
+
+                    <div class="form-group">
+                        (*) campos obrigatórios
+                    </div>
+                    <div class="form-group">
+                        <div>
+                            <button class="primary-btn" id="btnSalvar" type="button">Salvar</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <div class="col-md-6">
+                <div class="shiping-methods">
+                    <div class="section-title">
+                        <h4 class="title">Por que se tornar um cliente?</h4>
+                    </div>
+                    <p>
+                        A empresa Desencalha Estoque está em busca de novos parceiros para comercialização de seus produtos, caso haja o interesse seguir os seguintes passos:<br /><br />
+                        1- Ter CNPJ Ativo<br />
+                        2- Fazer o cadastro no site informando os dados necessários<br />
+                        3- Entraremos em contato o mais breve possível para melhor conhercermos<br />
+                        4- Ativação do login e senha<br />
+                    </p>
+                    <p>
+                </div>
+                <div class="shiping-methods">
+                    <div class="section-title">
+                        <h4 class="title">Já se tornou cliente?</h4>
+                    </div>
+                    <p>
+                        Pronto, você estará logado e acessando os diversos campos que o site te proporciona<br />
+                        Seu pedido será enviado a nós automaticamente. 
+                        <br /><br />
+                        O boleto será gerado e enviado por e-mail após a separação e conferimento da nota fiscal. Vale ressaltar que o conferimento é monitorado audiovisual, caso necessite nos informe que estaremos a disposição.
+
+                    </p>
+                    <p>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- /row -->
+        
+    </div>
+</div>

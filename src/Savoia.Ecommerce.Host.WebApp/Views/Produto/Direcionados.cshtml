@@ -1,0 +1,119 @@
+﻿@{
+    Layout = "_LayoutPesquisa";
+}
+
+@section breadCrumb {
+    <div id="breadcrumb">
+        <div class="container">
+            <ul class="breadcrumb">
+                <li><a href="/">Home</a></li>
+                <li class="active">Produtos que talvez você goste</li>
+            </ul>
+        </div>
+    </div>
+}
+<script>
+    $(document).ready(function () {
+
+         //Se o cabra não tiver logado, vamos forçar ele logar
+        if ($.trim(USUARIO_TOKEN) == "")
+            RedirecionarLogin(true);
+
+        var ordenacao = Js.Util.QueryString('ordenacao');
+        var paginaAtual = Js.Util.QueryString('paginaAtual');
+        var numeroRegistros = Js.Util.QueryString('numeroRegistros');
+
+        var queryAdicional = "&paginaAtual=" + paginaAtual + "&numeroRegistros=" + numeroRegistros + "&ordenacao=" + ordenacao; 
+        ListarProduto("divProduto", "direcionados", null, queryAdicional);
+
+        if (ordenacao!="")
+            $("#cboOrdenacao").val(ordenacao);
+        if (numeroRegistros != "")
+            $("#cboQtPaginas").val(numeroRegistros);
+
+        //Combo Estado - Cobranca
+        $("#cboOrdenacao, #cboQtPaginas").change(function (e) {
+            var valor = $(this).val();
+
+            TrocarFiltro();
+
+        });
+
+    });
+
+    TrocarFiltro = function (pagina) {
+
+        var nome = Js.Util.QueryString('nome');
+        var idCategoria = Js.Util.QueryString('idCategoria');
+        var paginaAtual = Js.Util.QueryString('paginaAtual');
+
+        var tipo = "nome=" + nome
+
+        ordenacao = $("#cboOrdenacao").val();
+
+        if (pagina == undefined || pagina == "")
+            pagina = 1;
+        
+        numeroRegistros = $("#cboQtPaginas").val();
+
+        window.location.href = "/produto/direcionados?" + tipo + "&ordenacao=" + ordenacao + "&paginaAtual=" + pagina + "&numeroRegistros=" + numeroRegistros;
+
+    }
+</script>
+<!-- HOME -->
+<div id="home">
+    <!-- container -->
+    <div class="container">
+        <!-- home wrap -->
+        <div class="home-wrap">
+            <!-- MAIN -->
+            <div id="main" class="col-md-12">
+                <!-- store top filter -->
+                <div class="store-filter clearfix" id="divFiltros">
+                    <div class="pull-left">
+                        <div class="sort-filter">
+                            <span class="text-uppercase">Ordenar por:</span>
+                            <select class="input" id="cboOrdenacao">
+                                <option value="Titulo">Nome</option>
+                                <option value="MenorValor">Menor Valor</option>
+                                <option value="MaiorValor">Maior Valor</option>
+                            </select>
+
+                        </div>
+                    </div>
+                    <div class="pull-right">
+                        <div class="page-filter">
+                            <span class="text-uppercase">Itens:</span>
+                            <select class="input" id="cboQtPaginas">
+                                <option value="40">40</option>
+                                <option value="60">60</option>
+                                <option value="80">80</option>
+                            </select>
+                        </div>
+                        <ul class="store-pages" id="divPaginacao">
+                            <li><span class="text-uppercase">Página:</span></li>
+
+                        </ul> 
+                    </div>
+                    </div>
+                <!-- /store top filter -->
+                <!-- STORE -->
+                <div id="store">
+                    <!-- row -->
+                        <p id="pResultadoPor"><B>Produtos que talvez você goste:</B> <strong id="lblProdutoPesquisado"></strong></p>
+                    <div class="row" id="divProduto">
+
+                        <!-- AQUI SÂO LISTADOS OS PRODUTOS VIA JQUERY-->
+
+                    </div>
+                    <!-- /row -->
+                </div>
+                <!-- /STORE -->
+            </div>
+            <!-- /MAIN -->
+        </div>
+        <!-- /home wrap -->
+    </div>
+    <!-- /container -->
+</div>
+<!-- /HOME -->

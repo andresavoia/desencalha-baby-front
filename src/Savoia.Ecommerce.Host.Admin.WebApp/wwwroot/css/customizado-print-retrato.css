@@ -1,0 +1,13 @@
+﻿@page {
+  size: portrait;
+  margin: 15px;
+}
+@media print {
+  html, body {
+    width: 800px;
+  }
+  body {
+    margin: 15px auto;
+  }
+
+}

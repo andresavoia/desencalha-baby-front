@@ -1,0 +1,398 @@
+﻿    /*div {
+        border:1px solid red
+    }*/
+
+/* **********************************************************  ESTILOS DEFINIDOS PARA O AGUARDE DAS PÁGINAS - INICIO ************************  */
+
+
+
+table, tr, td, th {
+    border-collapse: collapse;
+}
+
+tr.header {
+    cursor: pointer;
+}
+
+.header .sign:after {
+    content: "+";
+    display: inline-block;
+}
+
+.header.expand .sign:after {
+    content: "-";
+}
+
+
+
+
+
+.modal-aguarde {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+    background: rgba( 255, 255, 255, .8 ) url('../images/aguarde.gif') 50% 50% no-repeat;
+}
+
+/* When the body has the loading class, we turn
+   the scrollbar off with overflow:hidden */
+body.loading {
+    overflow: hidden;   
+}
+
+/* Anytime the body has the loading class, our
+   modal element will be visible */
+body.loading .modal-aguarde {
+    display: block;
+}
+
+/* **********************************************************  ESTILOS DEFINIDOS PARA O AGUARDE DAS PÁGINAS - FIM ************************  */
+
+/*Labels das telas sem bold*/
+label {
+    font-weight: normal !important;
+}
+
+/*Dimunindo os espaços dos forms*/
+.form-group {
+  margin-bottom: 7px;
+}
+
+/* estilos para fixar table com scroll */
+.table-fixed thead {
+    width: 98%;
+}
+
+.table-fixed tbody {
+    height: 340px;
+    overflow-y: auto;
+    width: 100%;
+}
+
+.table-fixed thead, .table-fixed tbody, .table-fixed tr, .table-fixed td, .table-fixed th {
+    display: block;
+}
+
+.table-fixed tbody td, .table-fixed thead > tr > th {
+    float: left;
+    border-bottom-width: 0;
+}
+
+ .table-fixed tbody td, .table-fixed thead > tr > th {
+    border:0px solid red;
+}
+            
+ .table-fixed tbody > tr > td{
+    cursor:pointer;
+}
+
+
+/*Alterando os titulos dos tabs das telas*/
+.nav > li > a {
+
+   color:slategray;
+}
+
+.savoia-div-fixo{
+    overflow:auto;
+    padding :0px;
+    margin:0px;
+}
+
+/*Estilos criados para o sistema */
+.savoia-modal-grande .modal-dialog {
+    width: 90%;
+}
+
+.savoia-modal-padrao .modal-dialog{
+    width: 420px;
+        
+}
+.savoia-modal-padrao  .modal-body {
+    height:100px
+}
+
+
+.savoia-modal-medio .modal-dialog{
+    width: 430px;
+        
+}
+.savoia-modal-medio  .modal-body {
+    height:140px
+}
+
+
+.savoia-modal-icone {
+}
+
+.validation-summary-errors ul { 
+        list-style: none;
+        margin-left:-40px
+    }
+
+.savoia-row-top{
+    margin-top:15px
+}
+
+.savoia-table-pesquisa
+{
+    padding-bottom:0px;
+    margin-bottom:0px
+}
+
+.savoia-row-rodape-top{
+    margin-top:65px
+}
+
+.savoia-bottom-0 {
+    padding-bottom:0px;
+    margin-bottom:0px;
+}
+
+.savoia-top-0{
+    padding-top:0px;
+    margin-top:0px;
+}
+
+.savoia-cursor-edicao{
+    cursor:pointer
+}
+
+.savoia-texto-branco{
+    color:white;
+}
+
+.savoia-tabela-header{
+    margin-bottom:0px;
+
+}
+.savoia-tabela-header thead tr th{
+    border-bottom:1px solid silver 
+
+}
+
+.list-group-item div p {
+  margin-bottom: 2px;
+} 
+
+.savoia-campo-data{
+}
+
+.savoia-campo-cpf{
+}
+.savoia-campo-cnpj{
+}
+
+.savoia-campo-valor{
+}
+
+.savoia-campo-numero{
+}
+
+.savoia-campo-cep{
+}
+
+.savoia-campo-telefone{
+}
+
+.error{
+    color:red;
+    font-size:smaller
+}
+/*inputs com erro na tela*/
+.input-validation-error {
+    border: 1px solid #ff0000;
+    background-color: rgba( 255, 255, 255, .8 );
+    background-color: #FADADA
+}
+
+/*estilos para fixar botões no rodape */
+.navbar-savoia { 
+    background-color: white;
+    color: #ffffff;
+    border-radius: 0;
+}
+
+.navbar-savoia .navbar-nav > li > a {
+    color: #fff;
+}
+
+.navbar-savoia .navbar-nav > .active > a, .navbar-nav > .active > a:hover, .navbar-nav > .active > a:focus {
+    color: #ffffff;
+    background-color: transparent;
+}
+
+.navbar-savoia .navbar-nav > li > a:hover, .nav > li > a:focus {
+    text-decoration: none;
+    /*background-color: #33aa33;*/
+}
+
+.navbar-savoia .navbar-brand {
+    color: #eeeeee;
+}
+
+.navbar-savoia .navbar-toggle {
+    background-color: #eeeeee;
+}
+
+.navbar-savoia .icon-bar {
+    background-color: #33aa33;
+}
+
+ /*cores do tooltip padrão das telas */
+div.tooltip-inner {
+    max-width: 350px;
+    background-color:black;
+    color:white;
+    border:1px solid silver;
+}
+
+
+
+
+
+/* TESTEEEE*/
+
+body {
+    color: #5c5c5c;
+}
+
+
+.text-primary {
+    color: #353535;
+}
+
+.text-bottom {
+    color: #d2d3d3;
+}
+
+.navbar {
+    background-image: -webkit-linear-gradient(#797978, #585858 50%, #333333);
+    background-image: -o-linear-gradient(#797978, #585858 50%, #333333);
+    background-image: linear-gradient(#797978, #585858 50%, #333333);
+    background-repeat: no-repeat;
+    filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ffffffff', endColorstr='#ffe4e4e4', GradientType=0);
+    filter: none;
+    border: 1px solid #d5d5d5;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.navbar-inverse {
+    background-image: -webkit-linear-gradient(#ffffff, #ffffff 50%, #ffffff);
+    background-image: -o-linear-gradient(#ffffff, #ffffff 50%, #ffffff);
+    background-image: linear-gradient(#ffffff, #ffffff 50%, #ffffff);
+    background-repeat: no-repeat;
+    filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ff6d94bf', endColorstr='#ff3e648d', GradientType=0);
+    filter: none;
+    border: 1px solid #ffffff;
+    text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.3);
+}
+
+
+.navbar-default .navbar-nav > li > a:hover,
+.navbar-default .navbar-nav > li > a:focus {
+    color: #d9ba00;
+    background-color: transparent;
+}
+
+.navbar-default .navbar-nav > .active > a,
+.navbar-default .navbar-nav > .active > a:hover,
+.navbar-default .navbar-nav > .active > a:focus {
+    color: #d9ba00;
+    background-color: transparent;
+}
+
+
+.navbar-default .navbar-nav > .open > a,
+.navbar-default .navbar-nav > .open > a:hover,
+.navbar-default .navbar-nav > .open > a:focus {
+    background-color: transparent;
+    color: #d9ba00;
+}
+
+
+.navbar-default .navbar-nav > li > a {
+    color: #d2d3d3;
+}
+.navbar-default .navbar-nav .open .dropdown-menu > li > a:hover,
+.navbar-default .navbar-nav .open .dropdown-menu > li > a:focus {
+    color: #d9ba00;
+    background-color: transparent;
+}
+
+.navbar-default .navbar-nav .open .dropdown-menu > .active > a,
+.navbar-default .navbar-nav .open .dropdown-menu > .active > a:hover,
+.navbar-default .navbar-nav .open .dropdown-menu > .active > a:focus {
+    color: #d9ba00;
+    background-color: transparent;
+}
+
+.btn-primary {
+    background-image: -webkit-linear-gradient(#fbd805, #e7c705 50%, #d9ba00);
+    background-image: -o-linear-gradient(#fbd805, #e7c705 50%, #d9ba00);
+    background-image: linear-gradient(#fbd805, #e7c705 50%, #d9ba00);
+    background-repeat: no-repeat;
+    filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ff6d94bf', endColorstr='#ff3e648d', GradientType=0);
+    filter: none;
+    border: 1px solid #345578;
+}
+
+.btn-primary:hover {
+    background-image: -webkit-linear-gradient(#eacf2c, #d1b824 50%, #b6a01b);
+    background-image: -o-linear-gradient(#eacf2c, #d1b824 50%, #b6a01b);
+    background-image: linear-gradient(#eacf2c, #d1b824 50%, #b6a01b);
+    background-repeat: no-repeat;
+    filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ff5f8ab9', endColorstr='#ff385a7f', GradientType=0);
+    filter: none;
+    border: 1px solid #2e4b69;
+}
+
+.bootstrap-dialog.type-primary .modal-header {
+    background-color: #323232;
+}
+
+
+
+
+/*FIM TESTEEEe*/
+
+
+
+
+
+ /* fundo dos modais abertos pelo sistema */
+/*.modal-backdrop {
+    opacity: 0 !important;
+    filter: Alpha(opacity=50);
+}*/
+
+ /*Configurações que só refletem na impressão do sistema */
+@page {
+  size: A4;
+  margin: 15px;
+  margin-top:25px;
+  margin-bottom:25px;
+}
+@media print {
+  html, body {
+    width: 820px;
+  }
+  body {
+    margin: 3px auto;
+  }
+
+  .small
+  {
+      height:5px
+  }
+.savoia-div-fixo {
+
+overflow:visible
+        
+}
+
+}

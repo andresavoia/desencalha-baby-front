@@ -1,0 +1,121 @@
+﻿@{
+    ViewBag.Title = "Login";
+    Layout = "~/Views/Shared/_LayoutPrincipal.cshtml";
+}
+<script>
+     $(document).ready(function () {
+
+        // se não for admin
+        if (Js.Util.QueryString('admin') == "undefined") {
+            $("#divVersaoAdm").css("display", "");
+        }
+
+        Js.Util.TratarEnterForm("checkout-form", "btnEntrar");
+
+        if (Js.Util.QueryString('sair') == "true") {
+            AdicionarStorage("", "");
+            window.location.href = '/';
+        }
+
+        $("#btnEntrar").click(
+            function () { Autenticar() }
+        );
+    });
+
+    Autenticar = function () {
+
+        LimparCampoValidacaoForm();
+
+        // se não for admin
+        if (Js.Util.QueryString('admin') == "undefined") {
+            url = URL_SERVICO + 'usuarios/autenticacao';
+        }
+        else
+            url = URL_SERVICO + 'clientes/autenticacao';
+
+
+        Js.Util.Post(url,
+            {
+                "Login": $("#Login").val(),
+                "Senha": $("#Senha").val(),
+                "PerfilVendedor" : true
+            },
+            function (response) { //OnSucess
+
+                if (response.Valido) {
+                    if (response.Dados != null && response.Dados != undefined) {
+                        AdicionarStorage(response.Dados.Nome, response.Dados.Token, response.Dados.CodUsuarioTipo);
+                        window.location = "/usuarios/home";
+                    }
+                }
+            },
+            function (xhr, ajaxOptions, thrownError) { //OnError
+
+                console.log(xhr)
+                var existeValidacaoCampo = false;
+
+                if (xhr.status == 400 || xhr.status == 500) {
+
+                    var data = JSON.parse(xhr.responseText);
+                    var mensagemGeral = "";
+
+                    TratarCampoValidacaoNovo(data.Mensagens);
+                }
+                else
+                    TratarErro(xhr, ajaxOptions, thrownError);
+            },
+            false,
+            function (request) {
+            });
+
+    }
+
+</script>
+<div class="row">
+    <div class="col-lg-8">
+        <section id="loginForm">
+            <h3></h3>
+            <form id="loginForm" class="form-horizontal" role="form" >
+                <div class="form-group col-lg-12">
+                    <div class="alert alert-danger hidden" role="alert" id="divMensagem">
+                                
+                    </div>
+
+                    <div class="row">
+                        <div class="form-group col-lg-6">
+                            <label class="control-label col-lg-3">Login</label>
+                            <div class="col-lg-9">
+                                <input class="form-control input-sm" type="email" id="Login" name="Login" placeholder="Digite seu login (email)">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="form-group col-lg-6 ">
+                            <label class="control-label col-lg-3">Senha</label>
+                            <div class="col-lg-9">
+                                 <input class="form-control input-sm" type="password" id="Senha" name="Senha" placeholder="Digite sua senha">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row" id="divVersaoAdm" style="display:none">
+                        <div class="form-group col-lg-6 ">
+                             <label class="control-label col-lg-3"></label>
+                            <div class="col-lg-9">
+                              <label class="text-warning"><b>Versão Administrador</b></label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row savoia-row-top">
+
+                        <div class="col-lg-9 col-lg-offset-1">
+                            <input type="button" value="Entrar" class="btn btn-primary" id="btnEntrar"/>
+                        </div>
+
+                    </div>
+                </div>
+            </form>
+
+        </section>
+    </div>
+</div>

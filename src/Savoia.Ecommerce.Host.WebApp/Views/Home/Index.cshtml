@@ -1,0 +1,79 @@
+﻿@{
+    Layout = "_LayoutPrincipal";
+}
+<script>
+
+    $(document).ready(function () {
+        ListarProduto("divProdutoPromocao", "recentes");
+
+        $("#imgBanner").click(function () {
+            window.location.href = "/cliente/novo";
+        });
+
+        //Se tiver logado, vamos mostrar primeiro as que estão no storage dele
+        if (USUARIO_TOKEN == null || USUARIO_TOKEN == ""){
+           $("#divBanner").removeClass("hidden");
+        }
+
+    });
+
+    
+
+</script>
+
+@section breadCrumb {
+    <div id="breadcrumb" class="hidden">
+        <div class="container">
+            <ul class="breadcrumb">
+                <li><a href="/">Home</a></li>
+                <li class="active">Blank</li>
+            </ul>
+        </div>
+    </div>
+}
+
+
+
+<div class="home-wrap">
+    <!-- home slick -->
+    <div class="container">
+            <div class="row">
+            <div class="col-md-12 col-sm-9 col-xs-9">
+                <div class="row hidden" id="divBanner" >
+                    <div style="border-top:0px;">
+                        <a id="imgBanner"><img src="~/img/banner-home.jpg"></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+            <div class="container">
+                <div class="row">
+                    <!-- section title -->
+                    <div class="col-md-12">
+                        <div class="section-title">
+                            <h2 class="title">Novos produtos</h2>
+                            <div class="pull-right">
+                                <div class="product-slick-dots-1 custom-dots">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- section title -->
+                    <!-- Product Slick -->
+                    <div class="col-md-12 col-sm-9 col-xs-9">
+                        <div class="row">
+                            <div id="divProdutoPromocao">
+                            </div>
+                        </div>
+                    </div>
+                    <!-- /Product Slick -->
+                </div>
+                
+                <!-- /home slick -->
+            </div>
+
+    </div>
+</div>
+
+ 

@@ -1,0 +1,166 @@
+﻿@using Savoia.Ecommerce.Host.Admin.WebApp.Controllers
+@using Savoia.Ecommerce.Host.Admin.WebApp.Util
+@{
+    Layout = "~/Views/Shared/_LayoutPopup.cshtml";
+}
+@section Scripts
+{
+    <script>
+
+        _nivelPopup = "@ViewData["NivelPopup"]";
+
+        $(document).ready(function () {
+
+            //Botão Salvar
+            $("#btnSalvar").click(function () {
+
+                acao = "@ConstantesComum.Acao.Alterar.ToString()";
+
+                var valido = true;
+
+                $("#frmPrincipal").find("input, select").each(function () {
+                    if (!$("#frmPrincipal").validate().element(this)) {
+                        console.log($(this).prop("id"));
+                        valido = false;
+                        return;
+                    }
+                });
+
+                if (!valido)
+                    return;
+
+                AlterarSenha();
+            });
+
+            //Botão Fechar
+            $("#btnFechar").click(function () {
+                Js.Util.Janela.FecharJanela(_nivelPopup);
+            });
+
+            $("form").validate().settings.ignore = "";
+             
+
+        }); //Fim do Ready
+
+        AlterarSenha = function (){
+
+            var urlApiEcommerce = 
+
+            url = "@ViewData["apiEcommerce"]" + 'usuarios/senhas'
+
+            ConsumirServico("PATCH",
+                        url,
+                        {
+                            SenhaAtual : $("#SenhaAtual").val(),
+                            SenhaNova : $("#SenhaNova").val(),
+                            SenhaConfirmacao : $("#SenhaConfirmacao").val()
+                        },
+                        function (response) { //OnSucess
+                      
+                            if (response != null && response.Valido) {
+                                
+                                Js.Util.Janela.RetornarJanelaPrincipal().Js.Util.Janela.MostrarMensagem(response.Mensagens[0].Mensagem, function () { Js.Util.Janela.FecharJanela(_nivelPopup) } @(!string.IsNullOrWhiteSpace(ViewData["FuncaoPosGravacao"]?.ToString())?"," + ViewData["FuncaoPosGravacao"] : ""));
+
+                            } else {
+                                Js.Util.Janela.RetornarJanelaPrincipal().Js.Util.Janela.MostrarMensagemErro(response.Mensagem);
+                            }
+
+                        },
+                        function (xhr, ajaxOptions, thrownError) { //OnError
+
+                        var existeValidacaoCampo = false;
+
+                        if (xhr.status == 400 || xhr.status == 500) {
+
+                            var data = JSON.parse(xhr.responseText);
+
+                            $.each(data.Mensagens, function () {
+
+                                if (this.Campo != null && this.Campo != '') {
+
+                                    TratarCampoValidacao(this.Campo, this.Mensagem);
+                                    existeValidacaoCampo = true;
+                                }
+
+                            });
+
+                            if (existeValidacaoCampo)
+                                Js.Util.ValidarForm($("#frmPrincipal"));
+
+                        }
+
+                        TratarErro(xhr, ajaxOptions, thrownError);
+                        },
+                        true,
+                        function (request) {
+                            request.setRequestHeader("authorization", "Bearer " +  USUARIO_TOKEN);
+                        });
+
+         
+        };
+
+        /* ***********************************   INICIO DAS FUNÇÕES ************************************* */
+
+        /* ***********************************   FIM DAS FUNÇÕES ************************************* */
+
+    </script>
+}
+
+<form class="form-horizontal" role="form"  id="frmPrincipal">
+    <input type="hidden" asp-for="NivelPopup" />
+    <input type="hidden" asp-for="FuncaoPosGravacao" />
+    <fieldset>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="form-group">
+                    <label asp-for="Usuario.SenhaAtual" class="col-md-4 control-label">Senha Atual</label>
+                    <div class="col-md-8">
+                        <input id="SenhaAtual" class="form-control input-sm" type="password">
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-12">
+                <div class="form-group">
+                    <label asp-for="Usuario.SenhaNova" class="col-md-4 control-label">Senha Nova</label>
+                    <div class="col-md-8">
+                        <input id="SenhaNova" class="form-control input-sm" type="password">
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-12">
+                <div class="form-group">
+                    <label asp-for="Usuario.SenhaNova" class="col-md-4 control-label">Senha Confirmação</label>
+                    <div class="col-md-8">
+                        <input id="SenhaConfirmacao" class="form-control input-sm" type="password">
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-12">
+                <div class="form-group">
+                    <div class="col-md-8">
+                        <span class="help-block">Deve conter uma letra maiúscula e um caracter especial, além de ter no minimo 6 caracteres.</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        <div class="row savoia-row-rodape-top">
+            <div class="col-md-9">
+                <nav class="navbar-savoia navbar-fixed-bottom" data-spy="affix">
+                    <div class="container-fluid">
+                        <div class="navbar-header" style="margin-bottom:15px">
+                         
+                            <button type="button" class="btn btn-primary" id="btnSalvar">
+                                <span class="glyphicon glyphicon-save"></span> Alterar
+                            </button>
+                            <button type="button" class="btn btn-default" id="btnFechar">
+                                <span class="glyphicon glyphicon-ban-circle"></span> Fechar
+                            </button>
+
+                        </div>
+                    </div>
+                </nav>
+            </div>
+        </div>
+    </fieldset>
+</form>

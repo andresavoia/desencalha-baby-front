@@ -1,0 +1,137 @@
+﻿
+/*Estilos criados para o sistema */
+.savoia-modal-grande .modal-dialog {
+    width: 90%;
+}
+
+.savoia-modal-padrao .modal-dialog {
+    width: 420px;
+}
+
+.savoia-modal-padrao .modal-body {
+    height: 100px
+}
+
+
+.savoia-modal-medio .modal-dialog {
+    width: 430px;
+}
+
+.savoia-modal-medio .modal-body {
+    height: 140px
+}
+
+
+.savoia-modal-icone {
+}
+
+.validation-summary-errors ul {
+    list-style: none;
+    margin-left: -40px
+}
+
+.savoia-row-top {
+    margin-top: 15px
+}
+
+.savoia-table-pesquisa {
+    padding-bottom: 0px;
+    margin-bottom: 0px
+}
+
+.savoia-row-rodape-top {
+    margin-top: 65px
+}
+
+.savoia-bottom-0 {
+    padding-bottom: 0px;
+    margin-bottom: 0px;
+}
+
+.savoia-top-0 {
+    padding-top: 0px;
+    margin-top: 0px;
+}
+
+.savoia-cursor-edicao {
+    cursor: pointer
+}
+
+.savoia-texto-branco {
+    color: white;
+}
+
+.savoia-botao-Indisponivel {
+    background: silver;
+    height: 38px;
+    display: inline-block;
+    padding: 10px 15px;
+    text-transform: uppercase;
+    border: none;
+
+}
+
+.savoia-tabela-header {
+    margin-bottom: 0px;
+}
+
+    .savoia-tabela-header thead tr th {
+        border-bottom: 1px solid silver
+    }
+
+.list-group-item div p {
+    margin-bottom: 2px;
+}
+
+.savoia-campo-data {
+}
+
+.savoia-campo-cpf {
+}
+
+.savoia-campo-cnpj {
+}
+
+.savoia-campo-valor {
+}
+
+.savoia-campo-numero {
+}
+
+.savoia-campo-cep {
+}
+
+.savoia-campo-telefone {
+}
+
+
+.modal-aguarde {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+    background: rgba( 255, 255, 255, .8 ) url('../img/aguarde.gif') 50% 50% no-repeat;
+}
+
+
+
+/* When the body has the loading class, we turn
+   the scrollbar off with overflow:hidden */
+body.loading {
+    overflow: hidden;
+}
+
+    /* Anytime the body has the loading class, our
+modal element will be visible */
+    body.loading .modal-aguarde {
+        display: block;
+    }
+
+.input-validation-error {
+    border: 1px solid #ff0000;
+    background-color: rgba( 255, 255, 255, .8 );
+    background-color: #fff5f5
+}

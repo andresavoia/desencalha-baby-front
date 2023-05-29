@@ -1,0 +1,624 @@
+﻿@using Savoia.Ecommerce.Host.Admin.WebApp.Controllers
+@using Savoia.Ecommerce.Host.Admin.WebApp.Util
+@{
+    Layout = "~/Views/Shared/_LayoutPopup.cshtml";
+}
+
+
+@section Scripts
+    {
+
+    <style>
+    </style>
+    <script>
+
+        var _nivelPopup = '@ViewData["nivelPopup"]';
+        var _funcaoPosGravacao = @ViewData["funcaoPosGravacao"];
+        var _acao = '@ViewData["acao"]';
+        var _id = '@ViewData["id"]';
+        var _mensagemExcluir = '@ConstantesWeb.MENSAGEM_REGISTRO_EXCLUIR'
+        var _urlApiEcommerce = '@ViewData["apiEcommerce"]'
+
+        $(document).ready(function () {
+
+            Js.Util.TratarEnterForm("frmPrincipal", "btnSalvar");
+
+            $('#CpfOuCnpj').mask('00.000.000/0000-00', { reverse: true });
+
+            TratarAcao();
+            ListarCategoria();
+
+            $("form").validate().settings.ignore = "";
+
+            if (_acao == Constantes.ACAO_ALTERAR) {
+                CarregarDados();
+            }
+
+            CarregarClienteStatus(_urlApiEcommerce, $("#CodClienteStatus"));
+            CarregarRamoAtividade(_urlApiEcommerce, $("#IdRamoAtividade"));
+            
+            CarregarFreteTipo(_urlApiEcommerce, $("#CodFreteTipo"));
+            CarregarEstado(URL_API_SAVOIA, $("#EnderecoEntrega_CodEstado"));
+            CarregarEstado(URL_API_SAVOIA, $("#EnderecoCobranca_CodEstado"));
+
+            //Botão Salvar
+            $("#btnSalvar").click(function () {
+                
+                if ($("#CodClienteStatus").val() == ConstantesEcommerce.CodClienteStatusPendente) {
+
+                    Js.Util.Janela.MostrarMensagemConfirmacao('Tem certeza que deseja salvar o cliente com o status de PENDENTE?',
+                        Salvar
+                    );
+
+                }
+                else {
+                    Salvar()
+                }               
+
+            });
+           
+           
+            //Botão Fechar
+            $("#btnFechar").click(function () {
+                parent.Pesquisar();
+
+                Js.Util.Janela.FecharJanela(_nivelPopup);
+            });
+
+            //Combo FreTipo
+            $("#CodFreteTipo").change(function (e) {
+
+                TratarFreteTipo();
+
+            });
+
+            //Combo Estado - Entrega
+            $("#EnderecoEntrega_CodEstado").change(function (e) {
+                var id = $(this).val();
+
+                $('#EnderecoEntrega_CodCidade').val("");
+                $('#EnderecoEntrega_Cidade').val("");
+
+                CarregarCidade(URL_API_SAVOIA,id, 'EnderecoEntrega_CodCidade', 'EnderecoEntrega_Cidade');
+
+            });
+
+            //Combo Estado - Cobrança
+            $("#EnderecoCobranca_CodEstado").change(function (e) {
+                var id = $(this).val();
+
+                $('#EnderecoCobranca_CodCidade').val("");
+                $('#EnderecoCobranca_Cidade').val("");
+
+                CarregarCidade(URL_API_SAVOIA, id, 'EnderecoCobranca_CodCidade', 'EnderecoCobranca_Cidade');
+
+            });
+
+        }); //Fim do Ready
+
+        /* ***********************************   INICIO DAS FUNÇÕES ************************************* */
+
+        Salvar = function () {
+
+            if ($("#DataNascOuFundacao").val() != "")
+                dataNascOuFundacao = Js.Util.FormatarData(Js.Util.RetornarDataJs($("#DataNascOuFundacao").val()), 'isoDateTime');
+            else
+                dataNascOuFundacao = "";
+
+            LimparCampoValidacaoForm();
+
+                
+            var categoriasSelecionadas = [];
+
+            $("[id*=chkCategoria]:checked").each(function () {
+
+                categoriasSelecionadas.push($(this).attr("idCategoria"));
+            });
+
+            ConsumirServico
+                ("PATCH",
+                _urlApiEcommerce + "clientes",
+                {
+                    "IdCliente": _id,
+                    "CodInterno": $("#CodInterno").val(),
+                    "CodClienteStatus": $("#CodClienteStatus").val(),
+                    "IdRamoAtividade": $("#IdRamoAtividade").val(),
+                    "CodFreteTipo": ($("#CodFreteTipo").val() == "" ? 0 : $("#CodFreteTipo").val()),
+                    "TipoPessoa": "PJ",
+                    "NomeOuRazao": $("#NomeOuRazao").val(),
+                    "ApelidoOuFantasia": $("#ApelidoOuFantasia").val(),
+                    "DataNascOuFundacao": dataNascOuFundacao,
+                    "CpfOuCnpj": $("#CpfOuCnpj").val(),
+                    "RgOuInscricao": $("#RgOuInscricao").val(),
+                    "EmailPrincipal": $("#EmailPrincipal").val(),
+                    "EmailAlternativo": $("#EmailAlternativo").val(),
+                    "Telefone1": $("#Telefone1").val(),
+                    "Telefone2": $("#Telefone2").val(),
+                    "Telefone3": $("#Telefone3").val(),
+                    "Contato": $("#Contato").val(),
+                    "Obs": $("#Obs").val(),
+                    "Login": $("#Login").val(),
+                    "ValorFreteFixo": Js.Util.FormatarValorPadrao($("#ValorFreteFixo").val()),
+                    "DiasPrazoEntregaFixo": ($("#DiasPrazoEntregaFixo").val()=="" ? 0 : $("#DiasPrazoEntregaFixo").val()),
+                    "Categorias" : categoriasSelecionadas,
+                    "EnderecoEntrega": {
+                        "Cidade": {
+                            "CodCidade": ($("#EnderecoEntrega_CodCidade").val() == "" ? 0 : $("#EnderecoEntrega_CodCidade").val()),
+                            "Estado": {
+                                "CodEstado": ($("#EnderecoEntrega_CodEstado").val() == "" ? 0 : $("#EnderecoEntrega_CodEstado").val()),
+                                "UF": $("#EnderecoEntrega_CodEstado option:selected").text()
+                            },
+                            "Titulo": $("#EnderecoEntrega_Cidade").val()
+                        },
+                        "Bairro": $("#EnderecoEntrega_Bairro").val(),
+                        "Endereco": $("#EnderecoEntrega_Endereco").val(),
+                        "Complemento": $("#EnderecoEntrega_Complemento").val(),
+                        "Cep": $("#EnderecoEntrega_Cep").val(),
+                        "Obs": $("#EnderecoEntrega_Obs").val()
+                    },
+                    "EnderecoCobranca": {
+                        "Cidade": {
+                            "CodCidade": ($("#EnderecoCobranca_CodCidade").val() == "" ?  0 : $("#EnderecoCobranca_CodCidade").val()),
+                            "Estado": {
+                                "CodEstado": ($("#EnderecoCobranca_CodEstado").val() == "" ? 0 : $("#EnderecoCobranca_CodEstado").val()),
+                                "UF": $("#EnderecoCobranca_CodEstado option:selected").text()
+                            },
+                            "Titulo": $("#EnderecoCobranca_Cidade").val()
+                        },
+                        "Bairro": $("#EnderecoCobranca_Bairro").val(),
+                        "Endereco": $("#EnderecoCobranca_Endereco").val(),
+                        "Complemento": $("#EnderecoCobranca_Complemento").val(),
+                        "Cep": $("#EnderecoCobranca_Cep").val(),
+                        "Obs": $("#EnderecoCobranca_Obs").val()
+                    }
+                }
+                ,
+                function (response) { //OnSucess
+
+                    if (response != null && response.Valido) {
+                        Js.Util.Janela.MostrarMensagem(response.Mensagens[0].Mensagem, function () { Js.Util.Janela.FecharJanela(_nivelPopup) }, _funcaoPosGravacao);
+                    }
+
+
+                },
+                function (xhr, ajaxOptions, thrownError) { //OnError
+
+                    var existeValidacaoCampo = false;
+
+                    if (xhr.status == 400 || xhr.status == 500) {
+
+                        var data = JSON.parse(xhr.responseText);
+
+                        $.each(data.Mensagens, function () {
+
+                            if (this.Campo != null && this.Campo != '') {
+
+                                TratarCampoValidacao(this.Campo, this.Mensagem);
+                                existeValidacaoCampo = true;
+                            }
+
+                        });
+
+                        if (existeValidacaoCampo)
+                            Js.Util.ValidarForm($("#frmPrincipal"));
+
+                    }
+
+                    TratarErro(xhr, ajaxOptions, thrownError);
+                },
+                true,
+                function (request) {
+                    request.setRequestHeader("authorization", "Bearer " + USUARIO_TOKEN);
+                });
+
+        }
+
+        TratarAcao = function (){
+
+            if(_acao == Constantes.ACAO_ALTERAR)
+            {
+                //$("#btnExcluir").removeClass("hidden")
+
+            }
+            else
+            {
+                //$("#btnExcluir").addClass("hidden")
+            }
+
+        }
+
+        CarregarDados = function () {
+
+            var url = _urlApiEcommerce + "clientes/" + _id;
+            Js.Util.Get(url,
+                null,
+                function (response) { //OnSucess
+
+                    if (response != null && response.Valido) {
+
+                        $("#CodInterno").val(response.Dados.CodInterno);
+                        $("#NomeOuRazao").val(response.Dados.NomeOuRazao);
+                        $("#CodFreteTipo").val(response.Dados.NomeOuRazao);
+                        $("#ApelidoOuFantasia").val(response.Dados.ApelidoOuFantasia);
+                        $("#DataNascOuFundacao").val(Js.Util.FormatarData(response.Dados.DataNascOuFundacao, "data-ptBr", 'isoDateTime') );
+                        $("#CpfOuCnpj").val(response.Dados.CpfOuCnpj);
+                        $("#RgOuInscricao").val(response.Dados.RgOuInscricao);
+                        $("#EmailPrincipal").val(response.Dados.EmailPrincipal);
+                        $("#EmailAlternativo").val(response.Dados.EmailAlternativo);
+                        $("#Telefone1").val(response.Dados.Telefone1);
+                        $("#Telefone2").val(response.Dados.Telefone2);
+                        $("#Telefone3").val(response.Dados.Telefone3);
+                        $("#Contato").val(response.Dados.Contato);
+                        $("#Obs").val(response.Dados.Obs);
+                        $("#Login").val(response.Dados.Login);
+                        $("#ValorFreteFixo").val(Js.Util.FormatarValorBrasil(response.Dados.ValorFreteFixo, false));
+                        $("#DiasPrazoEntregaFixo").val(response.Dados.DiasPrazoEntregaFixo);
+
+
+                        
+                        //EnderecoEntrega
+                        $("#EnderecoEntrega_Endereco").val(response.Dados.EnderecoEntrega.Endereco);
+                        $("#EnderecoEntrega_Complemento").val(response.Dados.EnderecoEntrega.Complemento);
+                        $("#EnderecoEntrega_Cep").val(response.Dados.EnderecoEntrega.Cep);
+                        $("#EnderecoEntrega_Bairro").val(response.Dados.EnderecoEntrega.Bairro);
+                        $("#EnderecoEntrega_CodCidade").val(response.Dados.EnderecoEntrega.Cidade.CodCidade);
+                        $("#EnderecoEntrega_Cidade").val(response.Dados.EnderecoEntrega.Cidade.Titulo);
+                        setTimeout(function () { $("#EnderecoEntrega_CodEstado").val(response.Dados.EnderecoEntrega.Cidade.Estado.CodEstado) }, 400);
+
+                        //EnderecoCobranca
+                        $("#EnderecoCobranca_Endereco").val(response.Dados.EnderecoCobranca.Endereco);
+                        $("#EnderecoCobranca_Complemento").val(response.Dados.EnderecoCobranca.Complemento);
+                        $("#EnderecoCobranca_Cep").val(response.Dados.EnderecoCobranca.Cep);
+                        $("#EnderecoCobranca_Bairro").val(response.Dados.EnderecoCobranca.Bairro);
+                        $("#EnderecoCobranca_CodCidade").val(response.Dados.EnderecoCobranca.Cidade.CodCidade);
+                        $("#EnderecoCobranca_Cidade").val(response.Dados.EnderecoCobranca.Cidade.Titulo);
+                        setTimeout(function () { $("#EnderecoCobranca_CodEstado").val(response.Dados.EnderecoCobranca.Cidade.Estado.CodEstado) }, 400);
+
+                         
+                        setTimeout(function () { $("#CodClienteStatus").val(response.Dados.CodClienteStatus) }, 200)
+                        setTimeout(function () { $("#IdRamoAtividade").val(response.Dados.IdRamoAtividade) }, 200)
+
+                        setTimeout(function () { $("#CodFreteTipo").val(response.Dados.CodFreteTipo); TratarFreteTipo(); }, 200)
+
+                        CarregarCidade(URL_API_SAVOIA, response.Dados.EnderecoEntrega.Cidade.Estado.CodEstado, 'EnderecoEntrega_CodCidade', 'EnderecoEntrega_Cidade');
+                        CarregarCidade(URL_API_SAVOIA, response.Dados.EnderecoCobranca.Cidade.Estado.CodEstado, 'EnderecoCobranca_CodCidade', 'EnderecoCobranca_Cidade');
+       
+                        var categoriasSelecionadas = response.Dados.Categorias;
+                        
+                        if (response.Dados.Categorias != null) {
+                            $.each(response.Dados.Categorias, function() {
+
+                                $("#chkCategoria_" + this).prop("checked", true);
+                            });
+                        }
+                        
+                    }
+                },
+                function (xhr, ajaxOptions, thrownError) { //OnError
+                    TratarErro(xhr, ajaxOptions, thrownError);
+                },
+                true,
+                function (request) {
+                    request.setRequestHeader("authorization", "Bearer " +  USUARIO_TOKEN);
+                });
+
+        }
+
+        TratarFreteTipo = function () {
+             
+            if ($("#CodFreteTipo").val() == ConstantesEcommerce.CodFreteTipoValorFixo) {
+                $("#divValorFreteFixo").removeClass('hidden')
+                $("#divDiasFreteFixo").removeClass('hidden')
+            }
+            else {
+                $("#divValorFreteFixo").addClass('hidden');
+                $("#divDiasFreteFixo").addClass('hidden');
+
+            }
+                
+        }
+  
+        ListarCategoria = function () {
+
+            url = _urlApiEcommerce + 'categorias?ativo=true';
+            listaRetorno = {};
+
+            Js.Util.Get(url,
+                null,
+                function (response) { //OnSucess
+
+                    if (response.Valido) {
+
+                        if (response.Dados != null && response.Dados != undefined) {
+                            
+                            var tr = $("#tblCategoria").append('<tr />').children('tr');
+                            var i = 0;
+                            var linha = "";
+                            $.each(response.Dados, function () {
+
+                                if (i == 0 )
+                                    linha += "<TD width='200' style='vertical-align: top'>"
+                                else
+                                    linha += "";
+
+                                linha +=    "<input class='form-check-input' type='checkbox' id='chkCategoria_" + this.IdCategoria + "' value='"  + this.IdCategoria + "' idCategoria='" + this.IdCategoria + "'/>"
+                                linha +=    "          <label class='form-check-label' for='chkCategoria_" + this.IdCategoria + "'>" + this.Titulo + "</label><br>"
+                                        
+                                if(i==4)
+                                    linha += "</td>"
+                                         
+                            i++;
+                                        
+                            if (i == 5) i = 0;
+                             });
+        
+                            if(i==4)
+                                linha += "</td>"
+       
+                            tr.append(linha);
+
+                        }
+                    }
+                },
+                function (xhr, ajaxOptions, thrownError) { //OnError
+
+                    if (xhr.status == 400 || xhr.status == 500) {
+
+                        var mensagem = "";
+
+                        var data = JSON.parse(xhr.responseText);
+
+                        $.each(data.Mensagens, function () {
+
+                            if (this.Campo == null)
+                                mensagem += this.Mensagem + "\n";
+
+                        });
+
+                        if (mensagem != "")
+                            Js.Util.Janela.MostrarMensagemErro(mensagem);
+
+                    }
+                    else
+                        Js.Util.Janela.MostrarMensagemErro(mensagem);
+                },
+                false,
+                function (request) {
+                    request.setRequestHeader("authorization", "Bearer " +  USUARIO_TOKEN);
+                    request.setRequestHeader("External", "true");
+                });
+
+            return listaRetorno;
+
+        }
+        /* ***********************************   FIM DAS FUNÇÕES ************************************* */
+
+    </script>
+
+}
+
+<form role="form" id="frmPrincipal">
+    <div class="row">
+        <div class="col-md-12">
+
+            <div class="form-row">
+                <div class="form-group col-md-2">
+                    <label>Cód Interno</label>
+                    <input class="form-control input-sm" type="text" name="CodInterno" id="CodInterno">
+                </div>
+                <div class="form-group col-md-3">
+                    <label>Razão</label>
+                    <input class="form-control input-sm" type="text" name="NomeOuRazao" id="NomeOuRazao">
+                </div>
+
+                <div class="form-group col-md-3">
+                    <label>Fantasia</label>
+                    <input class="form-control input-sm" type="text" name="ApelidoOuFantasia" id="ApelidoOuFantasia">
+                </div>
+
+                  <div class="form-group col-md-2">
+                    <label>Ramo Atividade</label>
+                    <select class="form-control input-sm" id="IdRamoAtividade" name="IdRamoAtividade"></select>
+                </div>
+                <div class="form-group col-md-2">
+                    <label class="text-warning"><label><strong>Status</strong></label></label>
+                    <select class="form-control input-sm" id="CodClienteStatus" name="CodClienteStatus"></select>
+                </div>
+
+            </div>
+
+            <div class="form-row">
+                <div class="form-group col-md-2">
+                    <label>CNPJ</label>
+                    <input class="form-control input-sm" type="text" name="CpfOuCnpj" id="CpfOuCnpj">
+                </div>
+                <div class="form-group col-md-2">
+                    <label>I.E</label>
+                    <input class="form-control input-sm" type="text" name="RgOuInscricao" id="RgOuInscricao">
+                </div>
+                <div class="form-group col-md-2">
+                    <label>Data Fundação</label>
+                    <input class="form-control input-sm  savoia-campo-data" type="text" name="DataNascOuFundacao" id="DataNascOuFundacao">
+                </div>
+                <div class="form-group col-md-2">
+                    <label>Contato</label>
+                    <input class="form-control input-sm" type="text" name="Contato" id="Contato">
+                </div>
+              
+                  <div class="form-group col-md-2">
+                    <label>Frete Tipo</label>
+                    <select class="form-control input-sm" id="CodFreteTipo" name="CodFreteTipo"></select>
+                </div>
+                <div class="form-group col-md-1" id="divValorFreteFixo">
+                    <label>Valor Fixo Frete</label>
+                    <input class="form-control input-sm savoia-campo-valor" type="text" name="ValorFreteFixo" id="ValorFreteFixo">
+                </div>
+                <div class="form-group col-md-1" id="divDiasFreteFixo">
+                    <label>Dias Entrega</label>
+                      <input class="form-control input-sm savoia-campo-numero" type="text" name="DiasPrazoEntregaFixo" id="DiasPrazoEntregaFixo">
+                </div>
+                
+            </div>
+
+            <div class="form-row">
+                <div class="form-group col-md-3">
+                    <label>Email Principal</label>
+                    <input class="form-control input-sm" type="text" name="EmailPrincipal" id="EmailPrincipal">
+                </div>
+                <div class="form-group col-md-3">
+                    <label>Email Alternativo</label>
+                    <input class="form-control input-sm" type="text" name="EmailAlternativo" id="EmailAlternativo">
+                </div>
+                <div class="form-group col-md-2">
+                    <label>Telefone 1</label>
+                    <input class="form-control input-sm savoia-campo-telefone" type="text" name="Telefone1" id="Telefone1">
+                </div>
+                <div class="form-group col-md-2">
+                    <label>Telefone 2</label>
+                    <input class="form-control input-sm savoia-campo-telefone" type="text" name="Telefone2" id="Telefone2">
+                </div>
+                <div class="form-group col-md-2">
+                    <label>Telefone 3</label>
+                    <input class="form-control input-sm savoia-campo-telefone" type="text" name="Telefone3" id="Telefone3">
+                </div>
+            </div>
+
+
+            <div class="form-row">
+                <div class="form-group col-md-2">
+                    <label>Login</label>
+                    <input class="form-control input-sm" type="text" name="Login" id="Login">
+                </div>
+                <div class="form-group col-md-6">
+                    <label>Observação</label>
+                    <textarea rows="2" class="form-control input-sm" id="Obs" name="Obs"></textarea>
+                </div>
+
+              
+            </div>
+
+
+            <div class="row" style="min-height:215px">
+                <div class="col-sm-12" id="divTabs">
+                    <ul class="nav nav-tabs">
+                        <li class="active"><a data-toggle="tab" href="#tabEnderecoEntrega">Endereço Entrega</a></li>
+                        <li><a data-toggle="tab" href="#tabEnderecoCobranca">Endereço Cobrança</a></li>
+                           <li><a data-toggle="tab" href="#tabCategoria">Categorias de produtos que deseja visualizar</a></li>
+                    </ul>
+                    <div class="tab-content">
+                        <div id="tabEnderecoEntrega" class="tab-pane fade active in ">
+
+                            <div class="form-row savoia-row-top">
+                                <div class="form-group col-md-6">
+                                    <label>Endereço</label>
+                                    <input class="form-control input-sm" type="text" id="EnderecoEntrega_Endereco" name="EnderecoEntrega_Endereco">
+                                </div>
+                                <div class="form-group col-md-2">
+                                    <label>Complemento</label>
+                                    <input class="form-control input-sm" type="text" id="EnderecoEntrega_Complemento" name="EnderecoEntrega_Complemento">
+                                </div>
+                                <div class="form-group col-md-2">
+                                    <label>Estado</label>
+                                    <select id="EnderecoEntrega_CodEstado" name="EnderecoEntrega_CodEstado" class="form-control input-sm"></select>
+                                </div>
+                                <div class="form-group col-md-2">
+                                    <label>Cidade</label>
+                                    <input id="EnderecoEntrega_CodCidade" name="EnderecoEntrega_CodCidade" type="hidden" />
+                                    <input id="EnderecoEntrega_Cidade" name="EnderecoEntrega_Cidade" type="text" class="form-control input-sm" placeholder="Digite o nome da cidade" autocomplete="off" data-val-required="Selecione a cidade" />
+                                </div>
+
+                            </div>
+                            <div class="form-row savoia-row-top">
+                                <div class="form-group col-md-2">
+                                    <label>Bairro</label>
+                                    <input id="EnderecoEntrega_Bairro" name="EnderecoEntrega_Bairro" class="form-control input-sm">
+                                </div>
+                                <div class="form-group col-md-2">
+                                    <label>CEP</label>
+                                    <input id="EnderecoEntrega_Cep" name="EnderecoEntrega_Cep" class="form-control input-sm  savoia-campo-cep">
+                                </div>
+                            
+                                <div class="form-group col-md-6">
+                                    <label>Obs</label>
+                                    <textarea id="EnderecoEntrega_Obs" name="EnderecoEntrega_Obs" rows="1" class="form-control input-sm"></textarea>
+                                </div>
+                            </div>
+
+                        </div>
+                        <div id="tabEnderecoCobranca" class="tab-pane fade ">
+
+                            <div class="form-row savoia-row-top">
+                                <div class="form-group col-md-6">
+                                    <label>Endereço</label>
+                                    <input class="form-control input-sm" type="text" id="EnderecoCobranca_Endereco" name="EnderecoCobranca_Endereco">
+                                </div>
+                                <div class="form-group col-md-2">
+                                    <label>Complemento</label>
+                                    <input class="form-control input-sm" type="text" id="EnderecoCobranca_Complemento" name="EnderecoCobranca_Complemento">
+                                </div>
+                                <div class="form-group col-md-2">
+                                    <label>Estado</label>
+                                    <select id="EnderecoCobranca_CodEstado" name="EnderecoCobranca_CodEstado" class="form-control input-sm"></select>
+                                </div>
+                                <div class="form-group col-md-2">
+                                    <label>Cidade</label>
+                                    <input id="EnderecoCobranca_CodCidade" name="EnderecoCobranca_CodCidade" type="hidden" />
+                                    <input id="EnderecoCobranca_Cidade" name="EnderecoCobranca_Cidade" type="text" class="form-control input-sm" placeholder="Digite o nome da cidade" autocomplete="off" data-val-required="Selecione a cidade" />
+                                </div>
+
+                            </div>
+                            <div class="form-row savoia-row-top">
+                                <div class="form-group col-md-2">
+                                    <label>Bairro</label>
+                                    <input id="EnderecoCobranca_Bairro" name="EnderecoCobranca_Bairro" class="form-control input-sm">
+                                </div>
+                                <div class="form-group col-md-2">
+                                    <label>CEP</label>
+                                    <input id="EnderecoCobranca_Cep" name="EnderecoCobranca_Cep" class="form-control input-sm  savoia-campo-cep">
+                                </div>
+
+                                <div class="form-group col-md-6">
+                                    <label>Obs</label>
+                                    <textarea id="EnderecoCobranca_Obs" name="EnderecoCobranca_Obs" rows="1" class="form-control input-sm"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                          <div id="tabCategoria" class="tab-pane fade ">
+
+                            <div class="form-row savoia-row-top">
+                                <div class="form-group col-md-12">
+                                   <table id="tblCategoria" ></table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="row savoia-row-rodape-top">
+        <div class="col-md-12">
+            <nav class="navbar-savoia navbar-fixed-bottom" data-spy="affix">
+                <div class="container-fluid">
+                    <div class="navbar-header" style="margin-bottom:5px">
+                        <button type="button" class="btn btn-primary" id="btnSalvar">
+                            <span class="glyphicon glyphicon-save"></span> Salvar
+                        </button>
+
+                        <button type="button" class="btn btn-default" id="btnFechar">
+                            <span class="glyphicon glyphicon-ban-circle"></span> Fechar
+                        </button>  
+                         
+
+                    </div>
+                </div>
+            </nav>
+        </div>
+    </div>
+
+</form>
+ 

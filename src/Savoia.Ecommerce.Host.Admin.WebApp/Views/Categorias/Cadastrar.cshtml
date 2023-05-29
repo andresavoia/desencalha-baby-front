@@ -1,0 +1,216 @@
+﻿@using Savoia.Ecommerce.Host.Admin.WebApp.Util
+@{
+    Layout = "~/Views/Shared/_LayoutPopup.cshtml";
+}
+@section Scripts
+{
+    <script>
+
+        var _nivelPopup = '@ViewData["nivelPopup"]';
+        var _funcaoPosGravacao = @ViewData["funcaoPosGravacao"];
+        var _acao = '@ViewData["acao"]';
+        var _id = '@ViewData["id"]';
+        var _mensagemExcluir = '@ConstantesWeb.MENSAGEM_REGISTRO_EXCLUIR'
+
+        var _urlApiEcommerce = '@ViewData["apiEcommerce"]'
+
+        $(document).ready(function () {
+
+            Js.Util.TratarEnterForm("frmPrincipal", "btnSalvar");
+            TratarAcao();
+
+            $("form").validate().settings.ignore = "";
+            
+            if (_acao == Constantes.ACAO_ALTERAR) {
+                CarregarDados();
+            }
+
+            //Botão Salvar
+            $("#btnSalvar").click(function () {
+
+                LimparCampoValidacaoForm();
+
+                Js.Util.Post(_urlApiEcommerce + "categorias",
+                            {
+                                "IdCategoria": _id,
+                                "CodInterno": $("#CodInterno").val(),
+                                "Titulo": $("#Titulo").val(),
+                                "Descricao": $("#Descricao").val(),
+                                "Ativo": ($("#Ativo:checked").val() ? true : false)
+                            },
+                        function (response) { //OnSucess
+                             
+                            if (response != null && response.Valido) {
+                                Js.Util.Janela.MostrarMensagem(response.Mensagens[0].Mensagem, function () { Js.Util.Janela.FecharJanela(_nivelPopup) }, _funcaoPosGravacao);
+                            }
+
+                           
+                        },
+                        function (xhr, ajaxOptions, thrownError) { //OnError
+
+                        var existeValidacaoCampo = false;
+
+                        if (xhr.status == 400 || xhr.status == 500) {
+
+                            var data = JSON.parse(xhr.responseText);
+
+                            $.each(data.Mensagens, function () {
+
+                                if (this.Campo != null && this.Campo != '') {
+
+                                    TratarCampoValidacao(this.Campo, this.Mensagem);
+                                    existeValidacaoCampo = true;
+                                }
+
+                            });
+
+                            if (existeValidacaoCampo)
+                                Js.Util.ValidarForm($("#frmPrincipal"));
+
+                        }
+
+                        TratarErro(xhr, ajaxOptions, thrownError);
+                    },
+                    true,
+                    function (request) {
+                        request.setRequestHeader("authorization", "Bearer " +  USUARIO_TOKEN);
+                    });
+                
+            });
+
+            //Botão excluir
+            $("#btnExcluir").click(
+                function () {
+
+                    url = _urlApiEcommerce + "categorias/" + _id;
+                    
+                    Js.Util.Janela.MostrarMensagemConfirmacao(_mensagemExcluir,
+                     function () {
+
+                    ConsumirServico
+                                ("DELETE",
+                                url,
+                                {
+                                },
+                                function (response) { //OnSucess
+                                    
+                                    if (response != null && response.Valido) 
+                                        Js.Util.Janela.MostrarMensagem(response.Mensagens[0].Mensagem, function () { Js.Util.Janela.FecharJanela(_nivelPopup) }, _funcaoPosGravacao);
+                                },
+                                function (xhr, ajaxOptions, thrownError) { //OnError
+                                    TratarErro(xhr, ajaxOptions, thrownError);
+                                },
+                        true,
+                        function (request) {
+                            request.setRequestHeader("authorization", "Bearer " +  USUARIO_TOKEN);
+                        });
+                });
+
+            });
+
+            //Botão Fechar
+            $("#btnFechar").click(function () {
+                Js.Util.Janela.FecharJanela(_nivelPopup);
+            });
+             
+
+
+        }); //Fim do Ready
+
+        /* ***********************************   INICIO DAS FUNÇÕES ************************************* */
+        TratarAcao = function (){
+
+            if(_acao == Constantes.ACAO_ALTERAR)
+            {
+                $("#btnExcluir").removeClass("hidden")
+               
+            }
+            else
+            {
+                $("#btnExcluir").addClass("hidden")
+            }
+
+        }
+
+        CarregarDados = function () {
+
+            var url = _urlApiEcommerce + "categorias/" + _id; 
+            Js.Util.Get(url,
+                null,
+                function (response) { //OnSucess
+
+                    if (response != null && response.Valido) {
+
+                        $("#CodInterno").val(response.Dados.CodInterno);
+                        $("#Titulo").val(response.Dados.Titulo);
+                        $("#Descricao").val(response.Dados.Descricao);
+
+                        if (response.Dados.Ativo == true)
+                            $("#Ativo[value='true']").prop('checked', 'checked');
+                        else
+                            $("#Ativo[value='false']").prop('checked', 'checked');
+
+                    }
+                },
+                function (xhr, ajaxOptions, thrownError) { //OnError
+                    TratarErro(xhr, ajaxOptions, thrownError);
+                },
+                true,
+                function (request) {
+                    request.setRequestHeader("authorization", "Bearer " +  USUARIO_TOKEN);
+                });
+
+        }
+        /* ***********************************   FIM DAS FUNÇÕES ************************************* */
+
+    </script>
+    <style>
+       
+    </style>
+}
+
+    <form class="form-horizontal" role="form" id="frmPrincipal">
+
+        <div class="form-group">
+            <label class="control-label">Cód Interno</label>
+            <input class="form-control input-sm" type="text" name="CodInterno" id="CodInterno">
+        </div>
+
+        <div class="form-group">
+            <label class="control-label">Titulo</label>
+            <input class="form-control input-sm" type="text" name="Titulo" id="Titulo">
+        </div>
+        <div class="form-group">
+            <label class="control-label">Descrição</label>
+            <textarea rows="4" class="form-control input-sm" id="Descricao" name="Descricao"></textarea>
+        </div>
+        <div class="form-group">
+            <label class="control-label">Status</label><br />
+            <input type="radio" value="true" checked="checked" name="Ativo" id="Ativo" /> <label>Ativo</label>
+            <input type="radio" value="false" style="margin-left:20px"  name="Ativo" id="Ativo"/> <label>Inativo</label>
+
+        </div>
+
+       
+        <div class="row savoia-row-rodape-top">
+            <div class="col-lg-12">
+                <nav class="navbar-savoia navbar-fixed-bottom" data-spy="affix">
+                    <div class="container-fluid">
+                        <div class="navbar-header" style="margin-bottom:5px">
+                            <button type="button" class="btn btn-primary" id="btnSalvar">
+                                <span class="glyphicon glyphicon-save"></span> Salvar
+                            </button>
+                            <button type="button" class="btn btn-default" id="btnExcluir">
+                                <span class="glyphicon glyphicon-trash"></span> Excluir
+                            </button>
+                            <button type="button" class="btn btn-default" id="btnFechar">
+                                <span class="glyphicon glyphicon-ban-circle"></span> Fechar
+                            </button>
+
+                        </div>
+                    </div>
+                </nav>
+            </div>
+        </div>
+
+    </form>

@@ -1,0 +1,135 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <meta name="robots" content="noindex">
+    <meta name="googlebot" content="noindex">
+
+    <title>Admin - Desencalha Estoque</title>
+    
+    <!-- *********************** Referencias CSS *********************************************** -->
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/lib/bootswatch/bootstrap.spacelab.5.1.3.min.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap3-dialog-master/dist/css/bootstrap-dialog.min.css" type="text/css" />
+    <link rel="stylesheet" href="~/lib/jquery-validation-mvc/dist/jquery.validate.mvc.min.css" type="text/css" />
+    <link rel="stylesheet" href="~/lib/bootstrap-datepicker-master/dist/css/bootstrap-datepicker.min.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap-ajax-typeahead-master/css/typeahead.css" />
+    <link rel="stylesheet" href="~/css/customizado-lib.css" asp-append-version="true" />
+ 
+    <!-- *********************** Referencias JS ************************************************* -->
+    <script src="~/lib/jquery/dist/jquery-2.2.4.min.js"></script>
+
+    <script src="~/lib/bootstrap/dist/js/bootstrap.min.js"></script>
+    <script src="~/lib/bootstrap3-dialog-master/dist/js/bootstrap-dialog.min.js"></script>
+    <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
+    <script src="~/lib/jquery-mask/dist/jquery.mask.min.js"></script>
+    <script src="~/lib/jquery-maskmoney/dist/jquery-maskmoney.min.js"></script>
+    <script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>
+    <script src="~/lib/jquery-validation-mvc/dist/jquery.validate.mvc.min.js"></script>
+    <script src="~/lib/jquery-validation-unobtrusive-method/jquery.validate.unobtrusive.method.cpf.min.js"></script>
+    <script src="~/lib/jquery-validation-unobtrusive-method/jquery.validate.unobtrusive.method.cnpj.min.js"></script>
+    <script src="/lib/tabletoexcel/tableToExcel.js"></script>
+
+    <script src="~/lib/bootstrap-datepicker-master/dist/js/bootstrap-datepicker.min.js"></script>
+    <script src="~/lib/bootstrap-datepicker-master/dist/locales/bootstrap-datepicker.pt-BR.min.js"></script>
+    <script src="~/lib/bootstrap-ajax-typeahead-master/js/bootstrap-typeahead.0.0.5.min.js"></script>   
+
+
+    <environment include="Development">
+  
+        <!-- *********************** Referencias JS-->
+        <script src="~/js/savoia.scripts.js" asp-append-version="true"  defer="defer"></script>
+        <script src="~/js/savoia.validacao.js" asp-append-version="true"  defer="defer"></script>
+        <script src="~/js/savoia.ecommerce.scripts.js"></script>
+
+        
+    </environment>
+
+
+@*
+    <environment include="Production">
+        
+        <!-- *********************** Referencias JS-->
+        <script src="~/js/savoia.scripts.min.js"  defer="defer"></script>
+        <script src="~/js/savoia.validacao.min.js"  defer="defer"></script>
+        <script src="~/js/savoia.ecommerce.scripts.min.js"></script>
+
+        
+    </environment>
+*@
+    <script>
+
+        var URL_SERVICO = "@ViewBag.apiEcommerce"; //http://localhost:8000/"
+
+    </script>
+
+
+    @RenderSection("scripts", required: false)
+
+    <script>
+
+        $.validator.methods.range = function (value, element, param) {
+            var globalizedValue = value.replace(".", "");
+            globalizedValue = globalizedValue.replace(",", ".");
+            return this.optional(element) ||
+                (globalizedValue >= param[0] &&
+                    globalizedValue <= param[1]);
+        };
+
+        $.validator.methods.number = function (value, element) {
+            return this.optional(element) ||
+                /^-?(?:\d+|\d{1,3}(?:[\s\.,]\d{3})+)(?:[\.,]\d+)?$/
+                    .test(value);
+        };
+    </script>
+</head>
+<body>
+    <!--//Para mostrar mensagem após Post dos popups-->
+    <input type="hidden" value="@ViewBag.ScriptTemporario" id="hdnScriptTemporario" />
+    @RenderSection("menuTopo", required: false)
+    @RenderBody()
+
+    <div class="modal bootstrap-dialog savoia-modal-padrao type-danger fade size-normal in" id="ValidationSummaryModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bootstrap-dialog-draggable">
+                    <div class="bootstrap-dialog-header">
+                        <div style="display: block;" class="bootstrap-dialog-close-button">
+                            <button class="close">×</button>
+                        </div>
+                        <div id="fedc9188-4010-4916-b5b8-9e44db8d59c4_title" class="bootstrap-dialog-title">Ocorreram erros</div>
+                    </div>
+                </div>
+
+
+                <div class="modal-body">
+                    <div class="bootstrap-dialog-body">
+                        <div class="bootstrap-dialog-message">
+                            <div class="col-xs-3"><img src="/images/ico-modal-erro-60x60.png" class="savoia-modal-icone"></div><div class="col-xs-9">
+
+                                <div asp-validation-summary="ModelOnly" class="bootstrap-dialog-message" id="erros"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+                <div style="display: block;" class="modal-footer">
+                    <div class="bootstrap-dialog-footer">
+                        <div class="bootstrap-dialog-footer-buttons">
+                            <button id="ba5381bd-605f-44b7-b9cf-7de54707a34a" class="btn btn-default pull-left" data-dismiss="modal">
+                                <span class="glyphicon glyphicon-ok"></span>  OK
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-aguarde"></div>
+
+</body>
+</html>
